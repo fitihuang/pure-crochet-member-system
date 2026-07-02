@@ -193,7 +193,7 @@
 			}
 
 			var thumbHtml = event['活動封面圖片網址']
-				? '<img class="eventThumb" src="' + event['活動封面圖片網址'] + '">'
+				? '<img class="eventThumb" src="' + event['活動封面圖片網址'] + '" onerror="this.style.display=\'none\'">'
 				: '';
 			var descriptionHtml = event['活動說明']
 				? '<div class="eventDescription">' + event['活動說明'] + '</div>'
