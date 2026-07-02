@@ -42,6 +42,26 @@ function generateNextId(sheetName, idColumnName, prefix, padLength) {
 	return prefix + String(nextNumber).padStart(padLength, '0');
 }
 
+// 依實際表頭順序組出一列資料，不用管欄位在 Sheet 裡實際排在第幾欄，避免之後改欄位順序時寫壞資料
+function appendRowFromObject(sheetName, rowObject) {
+	var sheet = getSheet(sheetName);
+	var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+	var row = headers.map(function (header) {
+		return rowObject[header] !== undefined ? rowObject[header] : '';
+	});
+	sheet.appendRow(row);
+}
+
+function updateRowFromObject(sheetName, rowNumber, rowObject) {
+	var sheet = getSheet(sheetName);
+	var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+	headers.forEach(function (header, index) {
+		if (rowObject[header] !== undefined) {
+			sheet.getRange(rowNumber, index + 1).setValue(rowObject[header]);
+		}
+	});
+}
+
 function todayAtMidnight() {
 	var now = new Date();
 	return new Date(now.getFullYear(), now.getMonth(), now.getDate());

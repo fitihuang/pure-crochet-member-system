@@ -65,6 +65,29 @@ function getAllMembers(idToken) {
 	return getSheetAsObjects('Members');
 }
 
+function createMember(idToken, memberData) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	var memberId = generateNextId('Members', '會員ID', 'M', 4);
+	appendRowFromObject('Members', Object.assign({
+		'會員ID': memberId,
+		'累積付費活動次數': 0,
+		'加入日期': new Date()
+	}, memberData));
+	return { success: true, memberId: memberId };
+}
+
+function updateMember(idToken, memberId, memberData) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	var member = findMemberById(memberId);
+	if (!member) throw new Error('找不到會員資料');
+	updateRowFromObject('Members', member._rowNumber, memberData);
+	return { success: true };
+}
+
 // Admin 手動按鈕呼叫的入口，需要驗證身份；定時觸發器請直接呼叫 runMemberUpgradeCheck
 function checkAllMembersUpgrade(idToken) {
 	var auth = verifyLineToken(idToken);

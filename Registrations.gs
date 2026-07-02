@@ -68,3 +68,29 @@ function appendRegistrationRow(registrationId, memberId, eventId, gradeId, isPai
 function appendPurchaseRow(purchaseId, memberId, item, amount, registrationId) {
 	getSheet('Purchases').appendRow([purchaseId, memberId, new Date(), item, amount, registrationId]);
 }
+
+function getEventRegistrationsForAdmin(idToken, eventId) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	return getSheetAsObjects('Registrations')
+		.filter(function (r) { return r['活動ID'] === eventId; })
+		.map(function (r) {
+			var member = findMemberById(r['會員ID']);
+			r['會員姓名'] = member ? member['姓名'] : r['會員ID'];
+			var grade = getGradeById(r['佔用名額類別']);
+			r['佔用名額類別名稱'] = grade ? grade['會員等級名稱'] : r['佔用名額類別'];
+			return r;
+		});
+}
+
+function updateRegistrationPayment(idToken, registrationId, isPaid) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	var registration = getSheetAsObjects('Registrations').filter(function (r) { return r['報名ID'] === registrationId; })[0];
+	if (!registration) throw new Error('找不到報名紀錄');
+
+	updateRowFromObject('Registrations', registration._rowNumber, { '是否付費': isPaid ? '是' : '否' });
+	return { success: true };
+}

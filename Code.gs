@@ -22,20 +22,44 @@ function handleApiRequest(action, params) {
 			case 'getAllMembers':
 				result = getAllMembers(params.idToken);
 				break;
+			case 'createMember':
+				result = createMember(params.idToken, params.memberData);
+				break;
+			case 'updateMember':
+				result = updateMember(params.idToken, params.memberId, params.memberData);
+				break;
 			case 'getEventList':
 				result = getEventList();
 				break;
 			case 'getEventDetail':
 				result = getEventDetail(params.eventId);
 				break;
+			case 'getAllEventsForAdmin':
+				result = getAllEventsForAdmin(params.idToken);
+				break;
+			case 'createEvent':
+				result = createEvent(params.idToken, params.eventData);
+				break;
+			case 'updateEvent':
+				result = updateEvent(params.idToken, params.eventId, params.eventData);
+				break;
 			case 'submitRegistration':
 				result = submitRegistration(params.idToken, params.eventId);
+				break;
+			case 'getEventRegistrationsForAdmin':
+				result = getEventRegistrationsForAdmin(params.idToken, params.eventId);
+				break;
+			case 'updateRegistrationPayment':
+				result = updateRegistrationPayment(params.idToken, params.registrationId, params.isPaid);
 				break;
 			case 'checkAllMembersUpgrade':
 				result = checkAllMembersUpgrade(params.idToken);
 				break;
 			case 'redeemCoupon':
 				result = redeemCoupon(params.idToken, params.couponId, params.registrationId);
+				break;
+			case 'getGradeList':
+				result = getGradeList();
 				break;
 			default:
 				result = { error: '未知的 action: ' + action };

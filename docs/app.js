@@ -26,6 +26,15 @@ function formatDate(value) {
 	return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
 }
 
+// 給 <input type="date"> 用，把後端回傳的日期轉成 YYYY-MM-DD
+function toDateInputValue(value) {
+	if (!value) return '';
+	var date = new Date(value);
+	var month = String(date.getMonth() + 1).padStart(2, '0');
+	var day = String(date.getDate()).padStart(2, '0');
+	return date.getFullYear() + '-' + month + '-' + day;
+}
+
 function logout() {
 	liff.logout();
 	location.reload();

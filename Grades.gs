@@ -1,3 +1,7 @@
+function getGradeList() {
+	return getSheetAsObjects('Grade');
+}
+
 function getGradeById(gradeId) {
 	var grades = getSheetAsObjects('Grade');
 	for (var i = 0; i < grades.length; i++) {

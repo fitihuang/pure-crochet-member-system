@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>管理後台 - Pure Crochet</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+	<script src="app.js"></script>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			font-family: "Noto Sans TC", -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf6f0;
+			color: #3a3530;
+			margin: 0;
+			padding-bottom: 32px;
+		}
+		.topBar {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: #fff;
+			padding: 14px 16px;
+			box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+			margin-bottom: 16px;
+		}
+		.topBarTitle {
+			font-size: 16px;
+			font-weight: 700;
+			color: #8a5a3c;
+		}
+		.topBarActions {
+			display: flex;
+			gap: 8px;
+		}
+		.main {
+			padding: 0 16px;
+			max-width: 640px;
+			margin: 0 auto;
+		}
+		.card {
+			background: #fff;
+			border-radius: 16px;
+			padding: 18px;
+			margin-bottom: 16px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+		}
+		.card h2 {
+			font-size: 15px;
+			margin: 0 0 12px;
+			color: #8a5a3c;
+			font-weight: 700;
+		}
+		button {
+			background: #a67c52;
+			color: #fff;
+			border: none;
+			border-radius: 10px;
+			padding: 9px 16px;
+			font-size: 14px;
+			cursor: pointer;
+		}
+		button:disabled {
+			background: #ddd6cc;
+			color: #999;
+			cursor: default;
+		}
+		.secondaryButton {
+			background: #f2ede6;
+			color: #8a5a3c;
+		}
+		.linkButton {
+			background: #e5f1f5;
+			color: #4a7a8c;
+			font-size: 12px;
+			padding: 6px 12px;
+		}
+		.smallButton {
+			font-size: 12px;
+			padding: 6px 12px;
+		}
+		input, select, textarea {
+			width: 100%;
+			padding: 9px;
+			font-size: 14px;
+			border: 1px solid #e0d8cc;
+			border-radius: 10px;
+			margin-bottom: 8px;
+			font-family: inherit;
+		}
+		textarea {
+			min-height: 70px;
+			resize: vertical;
+		}
+		.fieldLabel {
+			font-size: 12px;
+			color: #8c8378;
+			margin-bottom: 2px;
+			display: block;
+		}
+		.formBox {
+			background: #faf6f0;
+			border-radius: 12px;
+			padding: 14px;
+			margin-bottom: 14px;
+		}
+		.formBox h3 {
+			font-size: 14px;
+			margin: 0 0 10px;
+		}
+		.formRow {
+			display: flex;
+			gap: 8px;
+		}
+		.formRow > * {
+			flex: 1;
+		}
+		.listRow {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			border-bottom: 1px solid #f2ede6;
+			padding: 10px 0;
+			font-size: 14px;
+			gap: 8px;
+		}
+		.listRow:last-child {
+			border-bottom: none;
+		}
+		.listRowInfo {
+			flex: 1;
+		}
+		.listRowActions {
+			display: flex;
+			gap: 6px;
+			flex-shrink: 0;
+		}
+		.tagSmall {
+			display: inline-block;
+			font-size: 11px;
+			padding: 1px 8px;
+			border-radius: 999px;
+			background: #fdf0e0;
+			color: #a67c52;
+			margin-left: 4px;
+		}
+		.paidTag {
+			background: #e6f4ea;
+			color: #2e7d32;
+		}
+		.unpaidTag {
+			background: #fdeeee;
+			color: #c0392b;
+		}
+		.errorText {
+			color: #c0392b;
+			font-size: 14px;
+		}
+		.spinnerWrap {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			padding: 60px 0;
+			color: #a89a8a;
+			font-size: 13px;
+		}
+		.spinner {
+			width: 30px;
+			height: 30px;
+			border: 3px solid #ecdfd0;
+			border-top-color: #a67c52;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.lockOverlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(250, 246, 240, 0.9);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			z-index: 999;
+			font-size: 14px;
+			color: #8a5a3c;
+		}
+	</style>
+</head>
+<body>
+	<div class="topBar">
+		<span class="topBarTitle">管理後台</span>
+		<div class="topBarActions">
+			<a class="linkButton" style="text-decoration:none;" href="index.html">會員頁面</a>
+			<button class="secondaryButton smallButton" onclick="logout()">登出</button>
+		</div>
+	</div>
+	<div class="main">
+		<div id="app">
+			<div class="spinnerWrap"><div class="spinner"></div>初始化中...</div>
+		</div>
+	</div>
+
+	<script>
+		var idToken = null;
+		var gradeList = [];
+		var memberList = [];
+		var eventList = [];
+
+		function showApp(html) {
+			document.getElementById('app').innerHTML = html;
+		}
+
+		function showLoading(text) {
+			showApp('<div class="spinnerWrap"><div class="spinner"></div>' + (text || '載入中...') + '</div>');
+		}
+
+		function showError(message) {
+			showApp('<p class="errorText">' + message + '</p>');
+		}
+
+		initLiff().then(function () {
+			if (liff.isLoggedIn()) {
+				idToken = liff.getIDToken();
+				checkAdminAccess();
+			} else {
+				showLoginScreen();
+			}
+		}).catch(function (err) {
+			showError('LIFF 初始化失敗：' + err);
+		});
+
+		function showLoginScreen() {
+			showApp('' +
+				'<div class="card" style="text-align:center;">' +
+				'<h2>管理後台登入</h2>' +
+				'<button onclick="liff.login()">使用 LINE 登入</button>' +
+				'</div>'
+			);
+		}
+
+		function checkAdminAccess() {
+			showLoading('確認權限中...');
+			callApi('getMemberProfile', { idToken: idToken }).then(function (profile) {
+				if (!profile.isAdmin) {
+					showError('你沒有管理後台的權限');
+					return;
+				}
+				loadAdminData();
+			}).catch(function (err) { showError(err.message); });
+		}
+
+		function loadAdminData() {
+			showLoading('載入資料中...');
+			Promise.all([
+				callApi('getGradeList'),
+				callApi('getAllMembers', { idToken: idToken }),
+				callApi('getAllEventsForAdmin', { idToken: idToken })
+			]).then(function (results) {
+				gradeList = results[0];
+				memberList = results[1];
+				eventList = results[2];
+				renderAdminPage();
+			}).catch(function (err) { showError(err.message); });
+		}
+
+		function renderAdminPage() {
+			showApp('' +
+				'<div class="card" id="memberSection">' +
+				'<h2>會員管理</h2>' +
+				'<button class="secondaryButton smallButton" onclick="runUpgradeCheck()">立即檢查升等</button>' +
+				'<div id="memberFormArea">' + renderMemberForm(null) + '</div>' +
+				'<div id="memberListArea">' + renderMemberList() + '</div>' +
+				'</div>' +
+				'<div class="card" id="eventSection">' +
+				'<h2>活動管理</h2>' +
+				'<div id="eventFormArea">' + renderEventForm(null) + '</div>' +
+				'<div id="eventListArea">' + renderEventList() + '</div>' +
+				'</div>' +
+				'<div class="card" id="registrationSection" style="display:none;"></div>'
+			);
+		}
+
+		function runUpgradeCheck() {
+			showLockOverlay('檢查升等中...');
+			callApi('checkAllMembersUpgrade', { idToken: idToken }).then(function () {
+				return callApi('getAllMembers', { idToken: idToken });
+			}).then(function (members) {
+				memberList = members;
+				document.getElementById('memberListArea').innerHTML = renderMemberList();
+				hideLockOverlay();
+				alert('升等檢查完成');
+			}).catch(function (err) {
+				hideLockOverlay();
+				alert(err.message);
+			});
+		}
+
+		// ---------- 會員管理 ----------
+
+		function gradeOptionsHtml(selectedId) {
+			return gradeList.map(function (g) {
+				var selected = g['會員等級ID'] === selectedId ? ' selected' : '';
+				return '<option value="' + g['會員等級ID'] + '"' + selected + '>' + g['會員等級名稱'] + '</option>';
+			}).join('');
+		}
+
+		function renderMemberForm(member) {
+			var isEdit = !!member;
+			return '' +
+				'<div class="formBox">' +
+				'<h3>' + (isEdit ? '編輯會員：' + member['姓名'] : '新增會員') + '</h3>' +
+				'<span class="fieldLabel">姓名</span>' +
+				'<input id="memberNameInput" value="' + (isEdit ? member['姓名'] : '') + '">' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">Email</span><input id="memberEmailInput" value="' + (isEdit ? member['Email'] : '') + '"></div>' +
+				'<div><span class="fieldLabel">手機</span><input id="memberPhoneInput" value="' + (isEdit ? member['手機'] : '') + '"></div>' +
+				'</div>' +
+				'<span class="fieldLabel">會員等級</span>' +
+				'<select id="memberGradeInput">' + gradeOptionsHtml(isEdit ? member['會員等級ID'] : (gradeList[0] ? gradeList[0]['會員等級ID'] : '')) + '</select>' +
+				'<button onclick="saveMember(' + (isEdit ? "'" + member['會員ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增會員') + '</button> ' +
+				(isEdit ? '<button class="secondaryButton" onclick="resetMemberForm()">取消編輯</button>' : '') +
+				'</div>';
+		}
+
+		function resetMemberForm() {
+			document.getElementById('memberFormArea').innerHTML = renderMemberForm(null);
+		}
+
+		function editMember(memberId) {
+			var member = memberList.filter(function (m) { return m['會員ID'] === memberId; })[0];
+			document.getElementById('memberFormArea').innerHTML = renderMemberForm(member);
+			document.getElementById('memberSection').scrollIntoView({ behavior: 'smooth' });
+		}
+
+		function saveMember(memberId) {
+			var memberData = {
+				'姓名': document.getElementById('memberNameInput').value,
+				'Email': document.getElementById('memberEmailInput').value,
+				'手機': document.getElementById('memberPhoneInput').value,
+				'會員等級ID': document.getElementById('memberGradeInput').value
+			};
+			showLockOverlay(memberId ? '更新會員中...' : '新增會員中...');
+			var request = memberId
+				? callApi('updateMember', { idToken: idToken, memberId: memberId, memberData: memberData })
+				: callApi('createMember', { idToken: idToken, memberData: memberData });
+			request.then(function () {
+				hideLockOverlay();
+				return callApi('getAllMembers', { idToken: idToken });
+			}).then(function (members) {
+				memberList = members;
+				document.getElementById('memberFormArea').innerHTML = renderMemberForm(null);
+				document.getElementById('memberListArea').innerHTML = renderMemberList();
+			}).catch(function (err) {
+				hideLockOverlay();
+				alert(err.message);
+			});
+		}
+
+		function renderMemberList() {
+			if (memberList.length === 0) return '<p>目前沒有會員資料</p>';
+			return memberList.map(function (m) {
+				var grade = gradeList.filter(function (g) { return g['會員等級ID'] === m['會員等級ID']; })[0];
+				var gradeName = grade ? grade['會員等級名稱'] : m['會員等級ID'];
+				return '' +
+					'<div class="listRow">' +
+					'<div class="listRowInfo">' + m['姓名'] + '<span class="tagSmall">' + gradeName + '</span><br>' +
+					'<span style="color:#8c8378;font-size:12px;">' + (m['手機'] || m['Email'] || '') + '　付費次數：' + m['累積付費活動次數'] + '</span>' +
+					'</div>' +
+					'<div class="listRowActions"><button class="secondaryButton smallButton" onclick="editMember(\'' + m['會員ID'] + '\')">編輯</button></div>' +
+					'</div>';
+			}).join('');
+		}
+
+		// ---------- 活動管理 ----------
+
+		function renderEventForm(event) {
+			var isEdit = !!event;
+			return '' +
+				'<div class="formBox">' +
+				'<h3>' + (isEdit ? '編輯活動：' + event['活動名稱'] : '新增活動') + '</h3>' +
+				'<span class="fieldLabel">活動名稱</span>' +
+				'<input id="eventNameInput" value="' + (isEdit ? event['活動名稱'] : '') + '">' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">活動日期</span><input id="eventDateInput" type="date" value="' + (isEdit ? toDateInputValue(event['活動日期']) : '') + '"></div>' +
+				'<div><span class="fieldLabel">報名截止日</span><input id="eventDeadlineInput" type="date" value="' + (isEdit ? toDateInputValue(event['報名截止日']) : '') + '"></div>' +
+				'</div>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">總名額</span><input id="eventTotalQuotaInput" type="number" value="' + (isEdit ? event['總名額'] : '30') + '"></div>' +
+				'<div><span class="fieldLabel">VIP保留名額</span><input id="eventVipQuotaInput" type="number" value="' + (isEdit ? event['VIP保留名額'] : '10') + '"></div>' +
+				'<div><span class="fieldLabel">一般名額</span><input id="eventGeneralQuotaInput" type="number" value="' + (isEdit ? event['一般名額'] : '20') + '"></div>' +
+				'</div>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">是否付費</span><select id="eventIsPaidInput">' +
+				'<option value="是"' + (isEdit && event['是否付費'] === '是' ? ' selected' : '') + '>是</option>' +
+				'<option value="否"' + (isEdit && event['是否付費'] === '否' ? ' selected' : '') + '>否</option>' +
+				'</select></div>' +
+				'<div><span class="fieldLabel">費用</span><input id="eventFeeInput" type="number" value="' + (isEdit ? event['費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">狀態</span><select id="eventStatusInput">' +
+				['開放報名', '已截止', '已額滿'].map(function (s) {
+					return '<option value="' + s + '"' + (isEdit && event['狀態'] === s ? ' selected' : '') + '>' + s + '</option>';
+				}).join('') +
+				'</select></div>' +
+				'</div>' +
+				'<span class="fieldLabel">活動說明</span>' +
+				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動說明'] || '') : '') + '</textarea>' +
+				'<span class="fieldLabel">活動封面圖片網址</span>' +
+				'<input id="eventImageInput" value="' + (isEdit ? (event['活動封面圖片網址'] || '') : '') + '">' +
+				'<button onclick="saveEvent(' + (isEdit ? "'" + event['活動ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增活動') + '</button> ' +
+				(isEdit ? '<button class="secondaryButton" onclick="resetEventForm()">取消編輯</button>' : '') +
+				'</div>';
+		}
+
+		function resetEventForm() {
+			document.getElementById('eventFormArea').innerHTML = renderEventForm(null);
+		}
+
+		function editEvent(eventId) {
+			var event = eventList.filter(function (e) { return e['活動ID'] === eventId; })[0];
+			document.getElementById('eventFormArea').innerHTML = renderEventForm(event);
+			document.getElementById('eventSection').scrollIntoView({ behavior: 'smooth' });
+		}
+
+		function saveEvent(eventId) {
+			var eventData = {
+				'活動名稱': document.getElementById('eventNameInput').value,
+				'活動日期': document.getElementById('eventDateInput').value,
+				'報名截止日': document.getElementById('eventDeadlineInput').value,
+				'總名額': Number(document.getElementById('eventTotalQuotaInput').value),
+				'VIP保留名額': Number(document.getElementById('eventVipQuotaInput').value),
+				'一般名額': Number(document.getElementById('eventGeneralQuotaInput').value),
+				'是否付費': document.getElementById('eventIsPaidInput').value,
+				'費用': Number(document.getElementById('eventFeeInput').value),
+				'狀態': document.getElementById('eventStatusInput').value,
+				'活動說明': document.getElementById('eventDescriptionInput').value,
+				'活動封面圖片網址': document.getElementById('eventImageInput').value
+			};
+			showLockOverlay(eventId ? '更新活動中...' : '新增活動中...');
+			var request = eventId
+				? callApi('updateEvent', { idToken: idToken, eventId: eventId, eventData: eventData })
+				: callApi('createEvent', { idToken: idToken, eventData: eventData });
+			request.then(function () {
+				hideLockOverlay();
+				return callApi('getAllEventsForAdmin', { idToken: idToken });
+			}).then(function (events) {
+				eventList = events;
+				document.getElementById('eventFormArea').innerHTML = renderEventForm(null);
+				document.getElementById('eventListArea').innerHTML = renderEventList();
+			}).catch(function (err) {
+				hideLockOverlay();
+				alert(err.message);
+			});
+		}
+
+		function renderEventList() {
+			if (eventList.length === 0) return '<p>目前沒有活動</p>';
+			return eventList.map(function (e) {
+				return '' +
+					'<div class="listRow">' +
+					'<div class="listRowInfo">' + e['活動名稱'] + '<span class="tagSmall">' + e['狀態'] + '</span><br>' +
+					'<span style="color:#8c8378;font-size:12px;">' + formatDate(e['活動日期']) + '　VIP剩餘' + e['VIP剩餘名額'] + '／一般剩餘' + e['一般剩餘名額'] + '</span>' +
+					'</div>' +
+					'<div class="listRowActions">' +
+					'<button class="secondaryButton smallButton" onclick="editEvent(\'' + e['活動ID'] + '\')">編輯</button>' +
+					'<button class="smallButton" onclick="viewRegistrations(\'' + e['活動ID'] + '\')">報名名單</button>' +
+					'</div>' +
+					'</div>';
+			}).join('');
+		}
+
+		// ---------- 活動報名名單 ----------
+
+		function viewRegistrations(eventId) {
+			var section = document.getElementById('registrationSection');
+			section.style.display = 'block';
+			section.innerHTML = '<div class="spinnerWrap"><div class="spinner"></div>載入報名名單中...</div>';
+			section.scrollIntoView({ behavior: 'smooth' });
+
+			callApi('getEventRegistrationsForAdmin', { idToken: idToken, eventId: eventId }).then(function (registrations) {
+				var event = eventList.filter(function (e) { return e['活動ID'] === eventId; })[0];
+				renderRegistrationList(eventId, event, registrations);
+			}).catch(function (err) {
+				section.innerHTML = '<p class="errorText">' + err.message + '</p>';
+			});
+		}
+
+		function renderRegistrationList(eventId, event, registrations) {
+			var rows = registrations.length === 0
+				? '<p>目前還沒有人報名</p>'
+				: registrations.map(function (r) {
+					var paidHtml = r['是否付費'] === '是'
+						? '<span class="tagSmall paidTag">已付費</span>'
+						: '<span class="tagSmall unpaidTag">未付費</span>';
+					return '' +
+						'<div class="listRow">' +
+						'<div class="listRowInfo">' + r['會員姓名'] + paidHtml + '<span class="tagSmall">' + r['佔用名額類別名稱'] + '</span><br>' +
+						'<span style="color:#8c8378;font-size:12px;">報名時間：' + formatDate(r['報名時間']) + '</span>' +
+						'</div>' +
+						'<div class="listRowActions">' +
+						'<button class="secondaryButton smallButton" onclick="togglePayment(\'' + eventId + '\', \'' + r['報名ID'] + '\', ' + (r['是否付費'] !== '是') + ')">' +
+						(r['是否付費'] === '是' ? '標記未付費' : '標記已付費') +
+						'</button>' +
+						'</div>' +
+						'</div>';
+				}).join('');
+
+			document.getElementById('registrationSection').innerHTML = '' +
+				'<h2>「' + (event ? event['活動名稱'] : eventId) + '」報名名單</h2>' +
+				rows +
+				'<button class="secondaryButton" style="margin-top:10px;" onclick="closeRegistrations()">關閉</button>';
+		}
+
+		function togglePayment(eventId, registrationId, markPaid) {
+			showLockOverlay('更新繳費狀態中...');
+			callApi('updateRegistrationPayment', { idToken: idToken, registrationId: registrationId, isPaid: markPaid })
+				.then(function () {
+					hideLockOverlay();
+					viewRegistrations(eventId);
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
+				});
+		}
+
+		function closeRegistrations() {
+			var section = document.getElementById('registrationSection');
+			section.style.display = 'none';
+			section.innerHTML = '';
+		}
+	</script>
+</body>
+</html>

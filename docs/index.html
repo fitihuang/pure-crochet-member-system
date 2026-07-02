@@ -515,29 +515,8 @@
 			return '' +
 				'<div class="card">' +
 				'<h2>管理後台</h2>' +
-				'<button onclick="runUpgradeCheck()">立即檢查升等</button>' +
-				'<button onclick="loadAllMembers()">查看全部會員</button>' +
-				'<div id="allMembersTable"></div>' +
+				'<a href="admin.html"><button>前往管理後台</button></a>' +
 				'</div>';
-		}
-
-		function runUpgradeCheck() {
-			callApi('checkAllMembersUpgrade', { idToken: idToken })
-				.then(function () { alert('升等檢查完成'); })
-				.catch(function (err) { alert(err.message); });
-		}
-
-		function loadAllMembers() {
-			callApi('getAllMembers', { idToken: idToken })
-				.then(renderAllMembers)
-				.catch(function (err) { alert(err.message); });
-		}
-
-		function renderAllMembers(members) {
-			var rows = members.map(function (m) {
-				return '<div class="listItem">' + m['姓名'] + '　' + m['會員等級ID'] + '　付費次數：' + m['累積付費活動次數'] + '</div>';
-			}).join('');
-			document.getElementById('allMembersTable').innerHTML = rows;
 		}
 	</script>
 </body>

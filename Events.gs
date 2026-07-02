@@ -23,6 +23,41 @@ function getEventDetail(eventId) {
 	return decorateEventWithRemainingQuota(event);
 }
 
+function getAllEventsForAdmin(idToken) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+	return getSheetAsObjects('Events').map(decorateEventWithRemainingQuota);
+}
+
+function createEvent(idToken, eventData) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	var eventId = generateNextId('Events', '活動ID', 'E', 4);
+	var data = Object.assign({ '活動ID': eventId, '狀態': '開放報名' }, eventData);
+	convertEventDateFields(data);
+	appendRowFromObject('Events', data);
+	return { success: true, eventId: eventId };
+}
+
+function updateEvent(idToken, eventId, eventData) {
+	var auth = verifyLineToken(idToken);
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	var event = findEventById(eventId);
+	if (!event) throw new Error('找不到該活動');
+
+	var data = Object.assign({}, eventData);
+	convertEventDateFields(data);
+	updateRowFromObject('Events', event._rowNumber, data);
+	return { success: true };
+}
+
+function convertEventDateFields(data) {
+	if (data['活動日期']) data['活動日期'] = new Date(data['活動日期']);
+	if (data['報名截止日']) data['報名截止日'] = new Date(data['報名截止日']);
+}
+
 function findEventById(eventId) {
 	var events = getSheetAsObjects('Events');
 	for (var i = 0; i < events.length; i++) {
