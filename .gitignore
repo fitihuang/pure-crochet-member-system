@@ -1,0 +1,3 @@
+# 含有真實密鑰或個資的後端檔案，只用 clasp push 到 Apps Script，不進公開 git repo
+Auth.gs
+ImageUpload.gs

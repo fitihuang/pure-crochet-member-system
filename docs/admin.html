@@ -422,6 +422,8 @@
 				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動說明'] || '') : '') + '</textarea>' +
 				'<span class="fieldLabel">活動封面圖片網址</span>' +
 				'<input id="eventImageInput" value="' + (isEdit ? (event['活動封面圖片網址'] || '') : '') + '">' +
+				'<input id="eventImageFileInput" type="file" accept="image/*" onchange="uploadEventImage(this)">' +
+				'<div id="eventImageUploadStatus" style="font-size:12px;color:#8c8378;margin-bottom:8px;"></div>' +
 				'<button onclick="saveEvent(' + (isEdit ? "'" + event['活動ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增活動') + '</button> ' +
 				(isEdit ? '<button class="secondaryButton" onclick="resetEventForm()">取消編輯</button>' : '') +
 				'</div>';
@@ -435,6 +437,29 @@
 			var event = eventList.filter(function (e) { return e['活動ID'] === eventId; })[0];
 			document.getElementById('eventFormArea').innerHTML = renderEventForm(event);
 			document.getElementById('eventSection').scrollIntoView({ behavior: 'smooth' });
+		}
+
+		function uploadEventImage(fileInput) {
+			var file = fileInput.files[0];
+			if (!file) return;
+
+			var statusEl = document.getElementById('eventImageUploadStatus');
+			statusEl.textContent = '上傳中...';
+
+			var reader = new FileReader();
+			reader.onload = function () {
+				// FileReader 讀出來是 data:image/png;base64,xxxx，imgbb 只要逗號後面那段
+				var base64Image = reader.result.split(',')[1];
+				callApi('uploadImageToImgbb', { idToken: idToken, base64Image: base64Image })
+					.then(function (result) {
+						document.getElementById('eventImageInput').value = result.url;
+						statusEl.textContent = '上傳成功';
+					})
+					.catch(function (err) {
+						statusEl.textContent = '上傳失敗：' + err.message;
+					});
+			};
+			reader.readAsDataURL(file);
 		}
 
 		function saveEvent(eventId) {
