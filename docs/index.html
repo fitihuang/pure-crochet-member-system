@@ -184,7 +184,12 @@
 		}
 		.lockOverlay {
 			position: fixed;
-			inset: 0;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			width: 100%;
+			height: 100%;
 			background: rgba(250, 246, 240, 0.9);
 			display: flex;
 			flex-direction: column;
@@ -226,6 +231,41 @@
 			height: 4px;
 			border-radius: 50%;
 			background: #a67c52;
+		}
+		.calendarHeader {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+		.calendarHeader h2 {
+			margin: 0;
+		}
+		.calendarNavBtn {
+			background: #f2ede6;
+			color: #8a5a3c;
+			width: 28px;
+			height: 28px;
+			padding: 0;
+			border-radius: 50%;
+			font-size: 16px;
+			line-height: 1;
+		}
+		.paidTag {
+			font-size: 11px;
+			padding: 1px 8px;
+			border-radius: 999px;
+			background: #e6f4ea;
+			color: #2e7d32;
+			margin-left: 6px;
+		}
+		.unpaidTag {
+			font-size: 11px;
+			padding: 1px 8px;
+			border-radius: 999px;
+			background: #fdeeee;
+			color: #c0392b;
+			margin-left: 6px;
 		}
 	</style>
 </head>
@@ -334,23 +374,34 @@
 				return '<div class="card"><h2>我的報名紀錄</h2><p>目前沒有報名紀錄</p></div>';
 			}
 			var items = registrations.map(function (r) {
-				return '<div class="listItem">' + r['活動名稱'] + '　報名時間：' + formatDate(r['報名時間']) + '</div>';
+				var paidTag = r['是否付費'] === '是'
+					? '<span class="paidTag">✅ 已付費</span>'
+					: '<span class="unpaidTag">⏳ 未付費</span>';
+				return '<div class="listItem">' + r['活動名稱'] + paidTag + '<br>報名時間：' + formatDate(r['報名時間']) + '</div>';
 			}).join('');
 			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
 		}
 
-		// 簡單版行事曆：只顯示當月格子，有活動的日期標記出來，不做換月切換
+		// 簡單版行事曆：用已經抓回來的活動列表在前端算格子，換月不用重打 API
+		var calendarEvents = [];
+		var calendarYear, calendarMonth;
+
 		function renderCalendarCard(events) {
+			calendarEvents = events || [];
 			var today = new Date();
-			var year = today.getFullYear();
-			var month = today.getMonth();
-			var firstWeekday = new Date(year, month, 1).getDay();
-			var daysInMonth = new Date(year, month + 1, 0).getDate();
+			calendarYear = today.getFullYear();
+			calendarMonth = today.getMonth();
+			return '<div class="card" id="calendarCard">' + buildCalendarHtml() + '</div>';
+		}
+
+		function buildCalendarHtml() {
+			var firstWeekday = new Date(calendarYear, calendarMonth, 1).getDay();
+			var daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
 			var eventDays = {};
-			(events || []).forEach(function (event) {
+			calendarEvents.forEach(function (event) {
 				var d = new Date(event['活動日期']);
-				if (d.getFullYear() === year && d.getMonth() === month) {
+				if (d.getFullYear() === calendarYear && d.getMonth() === calendarMonth) {
 					eventDays[d.getDate()] = true;
 				}
 			});
@@ -369,10 +420,19 @@
 			}
 
 			return '' +
-				'<div class="card">' +
-				'<h2>' + (month + 1) + '月活動日曆</h2>' +
-				'<div class="calendarGrid">' + weekdayLabels + cells + '</div>' +
-				'</div>';
+				'<div class="calendarHeader">' +
+				'<button class="calendarNavBtn" onclick="changeCalendarMonth(-1)">‹</button>' +
+				'<h2>' + calendarYear + '年' + (calendarMonth + 1) + '月</h2>' +
+				'<button class="calendarNavBtn" onclick="changeCalendarMonth(1)">›</button>' +
+				'</div>' +
+				'<div class="calendarGrid">' + weekdayLabels + cells + '</div>';
+		}
+
+		function changeCalendarMonth(delta) {
+			calendarMonth += delta;
+			if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+			if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+			document.getElementById('calendarCard').innerHTML = buildCalendarHtml();
 		}
 
 		function renderEventsCard(events, registeredEventIds) {
