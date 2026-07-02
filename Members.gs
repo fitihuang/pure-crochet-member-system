@@ -50,8 +50,11 @@ function bindLineUserId(idToken, phoneOrEmail) {
 		return member['手機'] === phoneOrEmail || member['Email'] === phoneOrEmail;
 	})[0];
 
-	if (!matched) {
-		return { success: false, error: '找不到符合的會員資料' };
+	// 「查無資料」跟「已經被綁過」用同一句錯誤訊息，不能讓人靠錯誤訊息去猜別人的手機/Email 存不存在，
+	// 也不能讓已綁定的會員被其他人用同一組手機/Email 蓋掉綁定
+	var genericError = '找不到符合的會員資料，或該會員已完成綁定，請聯繫負責人確認';
+	if (!matched || matched['LINE userId']) {
+		return { success: false, error: genericError };
 	}
 
 	var lineUserIdColumn = getColumnIndexByHeader('Members', 'LINE userId');

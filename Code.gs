@@ -1,4 +1,9 @@
 function doGet(e) {
+	// GET 網址容易留在瀏覽器紀錄/伺服器 log 裡，帶身份憑證的請求一律擋掉，只留給不需要登入的查詢用
+	if (e.parameter.idToken) {
+		return ContentService.createTextOutput(JSON.stringify({ error: '需要身份驗證的操作請用 POST' }))
+			.setMimeType(ContentService.MimeType.JSON);
+	}
 	return handleApiRequest(e.parameter.action, e.parameter);
 }
 
