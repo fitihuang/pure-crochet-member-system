@@ -297,7 +297,12 @@
 		}
 
 		function showError(message) {
-			showApp('<p class="errorText">' + message + '</p>');
+			showApp('' +
+				'<div class="card">' +
+				'<p class="errorText">' + message + '</p>' +
+				'<button class="secondaryButton" onclick="logout()">重新登入</button>' +
+				'</div>'
+			);
 		}
 
 		initLiff().then(function () {
