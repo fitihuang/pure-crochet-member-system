@@ -115,6 +115,19 @@
 		@keyframes spin {
 			to { transform: rotate(360deg); }
 		}
+		.lockOverlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(250, 246, 240, 0.9);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			z-index: 999;
+			font-size: 14px;
+			color: #8a5a3c;
+		}
 	</style>
 </head>
 <body>
@@ -212,12 +225,17 @@
 		}
 
 		function register() {
+			showLockOverlay('報名處理中，請稍候...');
 			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
 				.then(function () {
+					hideLockOverlay();
 					alert('報名成功！');
-					loadDetail();
+					location.href = 'index.html';
 				})
-				.catch(function (err) { alert('報名失敗：' + err.message); });
+				.catch(function (err) {
+					hideLockOverlay();
+					alert('報名失敗：' + err.message);
+				});
 		}
 	</script>
 </body>

@@ -97,7 +97,13 @@ function countPaidRegistrations(memberId) {
 }
 
 function getMemberRegistrations(memberId) {
-	return getSheetAsObjects('Registrations').filter(function (r) { return r['會員ID'] === memberId; });
+	return getSheetAsObjects('Registrations')
+		.filter(function (r) { return r['會員ID'] === memberId; })
+		.map(function (r) {
+			var event = findEventById(r['活動ID']);
+			r['活動名稱'] = event ? event['活動名稱'] : r['活動ID'];
+			return r;
+		});
 }
 
 function getMemberCoupons(memberId) {

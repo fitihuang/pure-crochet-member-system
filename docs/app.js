@@ -30,3 +30,17 @@ function logout() {
 	liff.logout();
 	location.reload();
 }
+
+// 報名處理中蓋一層全螢幕遮罩，避免使用者在等結果的時候又點別的活動
+function showLockOverlay(text) {
+	var el = document.createElement('div');
+	el.id = 'lockOverlay';
+	el.className = 'lockOverlay';
+	el.innerHTML = '<div class="spinner"></div><div>' + (text || '處理中...') + '</div>';
+	document.body.appendChild(el);
+}
+
+function hideLockOverlay() {
+	var el = document.getElementById('lockOverlay');
+	if (el) el.remove();
+}

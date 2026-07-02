@@ -182,6 +182,51 @@
 		@keyframes spin {
 			to { transform: rotate(360deg); }
 		}
+		.lockOverlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(250, 246, 240, 0.9);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			z-index: 999;
+			font-size: 14px;
+			color: #8a5a3c;
+		}
+		.calendarGrid {
+			display: grid;
+			grid-template-columns: repeat(7, 1fr);
+			gap: 4px;
+			text-align: center;
+			font-size: 12px;
+		}
+		.calendarWeekday {
+			color: #a89a8a;
+			padding-bottom: 4px;
+		}
+		.calendarDay {
+			padding: 6px 0;
+			border-radius: 8px;
+			position: relative;
+		}
+		.calendarDay.hasEvent {
+			background: #fdf0e0;
+			color: #a67c52;
+			font-weight: 700;
+		}
+		.calendarDay.hasEvent::after {
+			content: '';
+			position: absolute;
+			bottom: 2px;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 4px;
+			height: 4px;
+			border-radius: 50%;
+			background: #a67c52;
+		}
 	</style>
 </head>
 <body>
@@ -254,6 +299,7 @@
 			var html = '';
 			html += renderProfileCard(profile);
 			html += renderCouponsCard(profile.coupons);
+			html += renderCalendarCard(events);
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderEventsCard(events, registeredEventIds);
 			if (profile.isAdmin) {
@@ -288,9 +334,45 @@
 				return '<div class="card"><h2>我的報名紀錄</h2><p>目前沒有報名紀錄</p></div>';
 			}
 			var items = registrations.map(function (r) {
-				return '<div class="listItem">活動 ' + r['活動ID'] + '　報名時間：' + formatDate(r['報名時間']) + '</div>';
+				return '<div class="listItem">' + r['活動名稱'] + '　報名時間：' + formatDate(r['報名時間']) + '</div>';
 			}).join('');
 			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
+		}
+
+		// 簡單版行事曆：只顯示當月格子，有活動的日期標記出來，不做換月切換
+		function renderCalendarCard(events) {
+			var today = new Date();
+			var year = today.getFullYear();
+			var month = today.getMonth();
+			var firstWeekday = new Date(year, month, 1).getDay();
+			var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+			var eventDays = {};
+			(events || []).forEach(function (event) {
+				var d = new Date(event['活動日期']);
+				if (d.getFullYear() === year && d.getMonth() === month) {
+					eventDays[d.getDate()] = true;
+				}
+			});
+
+			var weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
+				.map(function (w) { return '<div class="calendarWeekday">' + w + '</div>'; })
+				.join('');
+
+			var cells = '';
+			for (var i = 0; i < firstWeekday; i++) {
+				cells += '<div></div>';
+			}
+			for (var day = 1; day <= daysInMonth; day++) {
+				var cls = eventDays[day] ? 'calendarDay hasEvent' : 'calendarDay';
+				cells += '<div class="' + cls + '">' + day + '</div>';
+			}
+
+			return '' +
+				'<div class="card">' +
+				'<h2>' + (month + 1) + '月活動日曆</h2>' +
+				'<div class="calendarGrid">' + weekdayLabels + cells + '</div>' +
+				'</div>';
 		}
 
 		function renderEventsCard(events, registeredEventIds) {
@@ -332,12 +414,17 @@
 		}
 
 		function register(eventId) {
+			showLockOverlay('報名處理中，請稍候...');
 			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
 				.then(function () {
+					hideLockOverlay();
 					alert('報名成功！');
 					loadProfile();
 				})
-				.catch(function (err) { alert('報名失敗：' + err.message); });
+				.catch(function (err) {
+					hideLockOverlay();
+					alert('報名失敗：' + err.message);
+				});
 		}
 
 		function renderBindingForm() {
