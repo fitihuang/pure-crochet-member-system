@@ -69,6 +69,86 @@
 			color: #c0392b;
 			font-size: 14px;
 		}
+		.eventCard {
+			border: 1px solid #f0e8dd;
+			border-radius: 10px;
+			padding: 12px;
+			margin-bottom: 12px;
+		}
+		.eventCard:last-child {
+			margin-bottom: 0;
+		}
+		.eventHeader {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 6px;
+		}
+		.eventName {
+			font-size: 15px;
+			font-weight: bold;
+		}
+		.feeTag {
+			font-size: 12px;
+			padding: 2px 8px;
+			border-radius: 999px;
+			background: #fdf0e0;
+			color: #a67c52;
+			white-space: nowrap;
+		}
+		.freeTag {
+			font-size: 12px;
+			padding: 2px 8px;
+			border-radius: 999px;
+			background: #e6f4ea;
+			color: #2e7d32;
+			white-space: nowrap;
+		}
+		.eventMeta {
+			font-size: 13px;
+			color: #777;
+			margin-bottom: 10px;
+		}
+		.quotaRow {
+			display: flex;
+			gap: 12px;
+			margin-bottom: 10px;
+		}
+		.quotaItem {
+			flex: 1;
+		}
+		.quotaLabelRow {
+			display: flex;
+			justify-content: space-between;
+			font-size: 12px;
+			margin-bottom: 4px;
+		}
+		.quotaLabel.vip {
+			color: #a67c52;
+			font-weight: bold;
+		}
+		.quotaLabel.general {
+			color: #888;
+		}
+		.quotaBar {
+			background: #f0ece5;
+			border-radius: 999px;
+			height: 6px;
+			overflow: hidden;
+		}
+		.quotaBarFill {
+			height: 100%;
+			border-radius: 999px;
+		}
+		.quotaBarFill.vip {
+			background: #a67c52;
+		}
+		.quotaBarFill.general {
+			background: #c9c2b8;
+		}
+		.registerButton {
+			width: 100%;
+		}
 	</style>
 </head>
 <body>
@@ -184,16 +264,40 @@
 				return;
 			}
 
-			var items = events.map(function (event) {
-				return '' +
-					'<div class="listItem">' +
-					'<strong>' + event['活動名稱'] + '</strong><br>' +
-					'活動日期：' + formatDate(event['活動日期']) + '　費用：' + (event['是否付費'] === '是' ? '$' + event['費用'] : '免費') + '<br>' +
-					'VIP剩餘：' + event['VIP剩餘名額'] + '　一般剩餘：' + event['一般剩餘名額'] + '<br>' +
-					'<button onclick="register(\'' + event['活動ID'] + '\')">報名</button>' +
-					'</div>';
-			}).join('');
+			var items = events.map(renderEventCard).join('');
 			container.innerHTML = '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
+		}
+
+		function renderEventCard(event) {
+			var feeHtml = event['是否付費'] === '是'
+				? '<span class="feeTag">💰 $' + event['費用'] + '</span>'
+				: '<span class="freeTag">免費</span>';
+
+			var isFull = event['VIP剩餘名額'] <= 0 && event['一般剩餘名額'] <= 0;
+			var buttonHtml = isFull
+				? '<button class="registerButton" disabled>已額滿</button>'
+				: '<button class="registerButton" onclick="register(\'' + event['活動ID'] + '\')">報名</button>';
+
+			return '' +
+				'<div class="eventCard">' +
+				'<div class="eventHeader"><span class="eventName">' + event['活動名稱'] + '</span>' + feeHtml + '</div>' +
+				'<div class="eventMeta">📅 ' + formatDate(event['活動日期']) + '　⏰ 報名截止 ' + formatDate(event['報名截止日']) + '</div>' +
+				'<div class="quotaRow">' +
+				renderQuotaBar('vip', 'VIP', event['VIP保留名額'], event['VIP剩餘名額']) +
+				renderQuotaBar('general', '一般', event['一般名額'], event['一般剩餘名額']) +
+				'</div>' +
+				buttonHtml +
+				'</div>';
+		}
+
+		function renderQuotaBar(type, label, total, remaining) {
+			var used = total - remaining;
+			var percent = total > 0 ? Math.round((used / total) * 100) : 0;
+			return '' +
+				'<div class="quotaItem">' +
+				'<div class="quotaLabelRow"><span class="quotaLabel ' + type + '">' + label + '</span><span>' + used + '/' + total + '</span></div>' +
+				'<div class="quotaBar"><div class="quotaBarFill ' + type + '" style="width:' + percent + '%"></div></div>' +
+				'</div>';
 		}
 
 		function register(eventId) {
