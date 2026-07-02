@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Pure Crochet 會員系統</title>
+	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+	<style>
+		body {
+			font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf7f2;
+			color: #333;
+			margin: 0;
+			padding: 16px;
+		}
+		h1 {
+			font-size: 18px;
+			margin-bottom: 16px;
+		}
+		.card {
+			background: #fff;
+			border-radius: 12px;
+			padding: 16px;
+			margin-bottom: 16px;
+			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+		}
+		.card h2 {
+			font-size: 15px;
+			margin: 0 0 8px;
+			color: #a67c52;
+		}
+		.gradeTag {
+			display: inline-block;
+			background: #a67c52;
+			color: #fff;
+			font-size: 12px;
+			padding: 2px 10px;
+			border-radius: 999px;
+		}
+		.listItem {
+			border-bottom: 1px solid #eee;
+			padding: 8px 0;
+			font-size: 14px;
+		}
+		.listItem:last-child {
+			border-bottom: none;
+		}
+		button {
+			background: #a67c52;
+			color: #fff;
+			border: none;
+			border-radius: 8px;
+			padding: 8px 16px;
+			font-size: 14px;
+		}
+		button:disabled {
+			background: #ccc;
+		}
+		input {
+			width: 100%;
+			box-sizing: border-box;
+			padding: 8px;
+			font-size: 14px;
+			border: 1px solid #ccc;
+			border-radius: 8px;
+			margin-bottom: 8px;
+		}
+		.errorText {
+			color: #c0392b;
+			font-size: 14px;
+		}
+	</style>
+</head>
+<body>
+	<h1>Pure Crochet 會員系統</h1>
+	<div id="app">初始化中...</div>
+
+	<script>
+		var LIFF_ID = '2010573490-GEPNAkkX';
+		var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwRwRWP3OZkejgRm-SCu9q3Ac7KciJGnVgWJB-zfMPZ2WaWXmmYCwEo7FxS7cPNfUA8Xg/exec';
+		var idToken = null;
+
+		function callApi(action, params) {
+			var payload = Object.assign({ action: action }, params || {});
+			return fetch(WEB_APP_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+				body: JSON.stringify(payload)
+			})
+				.then(function (res) { return res.json(); })
+				.then(function (result) {
+					if (result && result.error) throw new Error(result.error);
+					return result;
+				});
+		}
+
+		function showApp(html) {
+			document.getElementById('app').innerHTML = html;
+		}
+
+		function showError(message) {
+			showApp('<p class="errorText">' + message + '</p>');
+		}
+
+		liff.init({ liffId: LIFF_ID }).then(function () {
+			if (!liff.isLoggedIn()) {
+				liff.login();
+				return;
+			}
+			idToken = liff.getIDToken();
+			loadProfile();
+		}).catch(function (err) {
+			showError('LIFF 初始化失敗：' + err);
+		});
+
+		function loadProfile() {
+			showApp('載入會員資料中...');
+			callApi('getMemberProfile', { idToken: idToken })
+				.then(renderProfile)
+				.catch(function (err) { showError(err.message); });
+		}
+
+		function renderProfile(profile) {
+			if (profile.needBinding) {
+				renderBindingForm();
+				return;
+			}
+
+			var html = '';
+			html += renderProfileCard(profile);
+			html += renderCouponsCard(profile.coupons);
+			html += renderRegistrationsCard(profile.registrations);
+			html += '<div id="eventsCard"></div>';
+			if (profile.isAdmin) {
+				html += renderAdminCard();
+			}
+			showApp(html);
+			loadEvents();
+		}
+
+		function renderProfileCard(profile) {
+			var gradeName = profile.grade ? profile.grade['會員等級名稱'] : '未分級';
+			return '' +
+				'<div class="card">' +
+				'<h2>我的資料</h2>' +
+				'<p>姓名：' + profile.name + '</p>' +
+				'<p>等級：<span class="gradeTag">' + gradeName + '</span></p>' +
+				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
+				'</div>';
+		}
+
+		function renderCouponsCard(coupons) {
+			if (!coupons || coupons.length === 0) {
+				return '<div class="card"><h2>我的優惠券</h2><p>目前沒有優惠券</p></div>';
+			}
+			var items = coupons.map(function (c) {
+				return '<div class="listItem">$' + c['金額'] + '　' + c['狀態'] + '　到期日：' + formatDate(c['到期日']) + '</div>';
+			}).join('');
+			return '<div class="card"><h2>我的優惠券</h2>' + items + '</div>';
+		}
+
+		function renderRegistrationsCard(registrations) {
+			if (!registrations || registrations.length === 0) {
+				return '<div class="card"><h2>我的報名紀錄</h2><p>目前沒有報名紀錄</p></div>';
+			}
+			var items = registrations.map(function (r) {
+				return '<div class="listItem">活動 ' + r['活動ID'] + '　報名時間：' + formatDate(r['報名時間']) + '</div>';
+			}).join('');
+			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
+		}
+
+		function loadEvents() {
+			callApi('getEventList')
+				.then(renderEvents)
+				.catch(function (err) { showError(err.message); });
+		}
+
+		function renderEvents(events) {
+			var container = document.getElementById('eventsCard');
+			if (!container) return;
+
+			if (!events || events.length === 0) {
+				container.innerHTML = '<div class="card"><h2>開放報名活動</h2><p>目前沒有開放報名的活動</p></div>';
+				return;
+			}
+
+			var items = events.map(function (event) {
+				return '' +
+					'<div class="listItem">' +
+					'<strong>' + event['活動名稱'] + '</strong><br>' +
+					'活動日期：' + formatDate(event['活動日期']) + '　費用：' + (event['是否付費'] === '是' ? '$' + event['費用'] : '免費') + '<br>' +
+					'VIP剩餘：' + event['VIP剩餘名額'] + '　一般剩餘：' + event['一般剩餘名額'] + '<br>' +
+					'<button onclick="register(\'' + event['活動ID'] + '\')">報名</button>' +
+					'</div>';
+			}).join('');
+			container.innerHTML = '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
+		}
+
+		function register(eventId) {
+			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
+				.then(function () {
+					alert('報名成功！');
+					loadProfile();
+				})
+				.catch(function (err) { alert('報名失敗：' + err.message); });
+		}
+
+		function renderBindingForm() {
+			showApp('' +
+				'<div class="card">' +
+				'<h2>第一次登入，請完成綁定</h2>' +
+				'<p>請輸入你在會員資料留的手機或 Email：</p>' +
+				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
+				'<button onclick="submitBinding()">確認綁定</button>' +
+				'</div>'
+			);
+		}
+
+		function submitBinding() {
+			var value = document.getElementById('bindInput').value;
+			callApi('bindLineUserId', { idToken: idToken, phoneOrEmail: value })
+				.then(function (result) {
+					if (result.success) {
+						loadProfile();
+					} else {
+						alert(result.error);
+					}
+				})
+				.catch(function (err) { alert(err.message); });
+		}
+
+		function renderAdminCard() {
+			return '' +
+				'<div class="card">' +
+				'<h2>管理後台</h2>' +
+				'<button onclick="runUpgradeCheck()">立即檢查升等</button>' +
+				'<button onclick="loadAllMembers()">查看全部會員</button>' +
+				'<div id="allMembersTable"></div>' +
+				'</div>';
+		}
+
+		function runUpgradeCheck() {
+			callApi('checkAllMembersUpgrade', { idToken: idToken })
+				.then(function () { alert('升等檢查完成'); })
+				.catch(function (err) { alert(err.message); });
+		}
+
+		function loadAllMembers() {
+			callApi('getAllMembers', { idToken: idToken })
+				.then(renderAllMembers)
+				.catch(function (err) { alert(err.message); });
+		}
+
+		function renderAllMembers(members) {
+			var rows = members.map(function (m) {
+				return '<div class="listItem">' + m['姓名'] + '　' + m['會員等級ID'] + '　付費次數：' + m['累積付費活動次數'] + '</div>';
+			}).join('');
+			document.getElementById('allMembersTable').innerHTML = rows;
+		}
+
+		function formatDate(value) {
+			if (!value) return '';
+			var date = new Date(value);
+			return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
+		}
+	</script>
+</body>
+</html>
