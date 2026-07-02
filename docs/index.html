@@ -62,6 +62,11 @@
 			padding: 3px 12px;
 			border-radius: 999px;
 		}
+		.gradeBadgeImg {
+			display: inline-block;
+			height: 28px;
+			vertical-align: middle;
+		}
 		.listItem {
 			border-bottom: 1px solid #f2ede6;
 			padding: 10px 0;
@@ -349,16 +354,31 @@
 		}
 
 		function renderProfileCard(profile) {
-			var gradeName = profile.grade ? profile.grade['會員等級名稱'] : '未分級';
 			var myLineUserId = liff.getDecodedIDToken() ? liff.getDecodedIDToken().sub : '';
 			return '' +
 				'<div class="card">' +
 				'<h2>我的資料</h2>' +
 				'<p>姓名：' + profile.name + '</p>' +
-				'<p>等級：<span class="gradeTag">' + gradeName + '</span></p>' +
+				'<p>等級：' + renderGradeBadge(profile.grade) + '</p>' +
 				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
 				'<p style="font-size:12px;color:#a89a8a;">LINE ID（設定管理員用）：' + myLineUserId + '</p>' +
 				'</div>';
+		}
+
+		// 等級有設定徽章圖片就顯示圖片，沒有就顯示原本的文字底色標籤；圖片失效時自動退回文字標籤
+		function renderGradeBadge(grade) {
+			if (!grade) return '<span class="gradeTag">未分級</span>';
+			if (grade['徽章圖片網址']) {
+				return '<img class="gradeBadgeImg" src="' + grade['徽章圖片網址'] + '" alt="' + grade['會員等級名稱'] + '" onerror="this.replaceWith(fallbackGradeTag(this.alt))">';
+			}
+			return '<span class="gradeTag">' + grade['會員等級名稱'] + '</span>';
+		}
+
+		function fallbackGradeTag(name) {
+			var span = document.createElement('span');
+			span.className = 'gradeTag';
+			span.textContent = name;
+			return span;
 		}
 
 		function renderCouponsCard(coupons) {
