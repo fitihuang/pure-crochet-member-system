@@ -350,12 +350,14 @@
 
 		function renderProfileCard(profile) {
 			var gradeName = profile.grade ? profile.grade['會員等級名稱'] : '未分級';
+			var myLineUserId = liff.getDecodedIDToken() ? liff.getDecodedIDToken().sub : '';
 			return '' +
 				'<div class="card">' +
 				'<h2>我的資料</h2>' +
 				'<p>姓名：' + profile.name + '</p>' +
 				'<p>等級：<span class="gradeTag">' + gradeName + '</span></p>' +
 				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
+				'<p style="font-size:12px;color:#a89a8a;">LINE ID（設定管理員用）：' + myLineUserId + '</p>' +
 				'</div>';
 		}
 
