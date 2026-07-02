@@ -15,15 +15,9 @@ function callApi(action, params) {
 		});
 }
 
-// 回傳 idToken；如果還沒登入，liff.login() 會導轉出去，這裡回傳 null 讓呼叫端不要往下執行
+// 只做初始化，不自動觸發登入導轉，讓使用者先看到頁面、自己按按鈕才登入
 function initLiff() {
-	return liff.init({ liffId: LIFF_ID }).then(function () {
-		if (!liff.isLoggedIn()) {
-			liff.login();
-			return null;
-		}
-		return liff.getIDToken();
-	});
+	return liff.init({ liffId: LIFF_ID });
 }
 
 function formatDate(value) {

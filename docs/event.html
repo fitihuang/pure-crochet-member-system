@@ -138,13 +138,26 @@
 		if (!eventId) {
 			showError('缺少活動代碼');
 		} else {
-			initLiff().then(function (token) {
-				if (!token) return;
-				idToken = token;
-				loadDetail();
+			initLiff().then(function () {
+				if (liff.isLoggedIn()) {
+					idToken = liff.getIDToken();
+					loadDetail();
+				} else {
+					showLoginScreen();
+				}
 			}).catch(function (err) {
 				showError('LIFF 初始化失敗：' + err);
 			});
+		}
+
+		function showLoginScreen() {
+			showApp('' +
+				'<div class="card" style="text-align:center;">' +
+				'<h2>登入查看活動詳情</h2>' +
+				'<p>登入後可以查看名額狀況並直接報名</p>' +
+				'<button onclick="liff.login()">使用 LINE 登入</button>' +
+				'</div>'
+			);
 		}
 
 		function loadDetail() {

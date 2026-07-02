@@ -210,13 +210,26 @@
 			showApp('<p class="errorText">' + message + '</p>');
 		}
 
-		initLiff().then(function (token) {
-			if (!token) return;
-			idToken = token;
-			loadProfile();
+		initLiff().then(function () {
+			if (liff.isLoggedIn()) {
+				idToken = liff.getIDToken();
+				loadProfile();
+			} else {
+				showLoginScreen();
+			}
 		}).catch(function (err) {
 			showError('LIFF 初始化失敗：' + err);
 		});
+
+		function showLoginScreen() {
+			showApp('' +
+				'<div class="card" style="text-align:center;">' +
+				'<h2>歡迎使用 Pure Crochet 會員系統</h2>' +
+				'<p>登入後可查看你的會員等級、優惠券與報名紀錄</p>' +
+				'<button onclick="liff.login()">使用 LINE 登入</button>' +
+				'</div>'
+			);
+		}
 
 		// 會員資料跟活動列表沒有先後依賴關係，同時發出去平行等待，減少總等待時間
 		function loadProfile() {
