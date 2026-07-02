@@ -17,6 +17,9 @@ function issueCouponToMember(memberId) {
 	var couponId = generateNextId('Coupons', '優惠券ID', 'C', 4);
 
 	getSheet('Coupons').appendRow([couponId, memberId, issueMonth, issueDate, expireDate, 200, '生效中', '']);
+	// 這支會在迴圈裡被連續呼叫很多次，一定要清快取，不然下一位會員的 generateNextId 會抓到還沒加進去這筆的舊資料，
+	// 導致編號重複
+	clearSheetCache();
 }
 
 function redeemCoupon(idToken, couponId, registrationId) {
@@ -34,6 +37,7 @@ function redeemCoupon(idToken, couponId, registrationId) {
 	var sheet = getSheet('Coupons');
 	sheet.getRange(coupon._rowNumber, statusColumn).setValue('已使用');
 	sheet.getRange(coupon._rowNumber, usedInColumn).setValue(registrationId);
+	clearSheetCache();
 
 	return { success: true };
 }
@@ -49,4 +53,5 @@ function updateExpiredCoupons() {
 			sheet.getRange(coupon._rowNumber, statusColumn).setValue('已過期');
 		}
 	});
+	clearSheetCache();
 }

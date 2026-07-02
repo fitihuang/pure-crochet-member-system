@@ -59,6 +59,7 @@ function bindLineUserId(idToken, phoneOrEmail) {
 
 	var lineUserIdColumn = getColumnIndexByHeader('Members', 'LINE userId');
 	getSheet('Members').getRange(matched._rowNumber, lineUserIdColumn).setValue(auth.lineUserId);
+	clearSheetCache();
 	return { success: true };
 }
 
@@ -114,6 +115,7 @@ function runMemberUpgradeCheck() {
 			sheet.getRange(member._rowNumber, gradeColumn).setValue(newGrade['會員等級ID']);
 		}
 	});
+	clearSheetCache();
 }
 
 function countPaidRegistrations(memberId) {

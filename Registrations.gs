@@ -63,10 +63,12 @@ function appendRegistrationRow(registrationId, memberId, eventId, gradeId, isPai
 	getSheet('Registrations').appendRow(
 		[registrationId, memberId, eventId, new Date(), gradeId, gradeId, isPaid, amount, '']
 	);
+	clearSheetCache();
 }
 
 function appendPurchaseRow(purchaseId, memberId, item, amount, registrationId) {
 	getSheet('Purchases').appendRow([purchaseId, memberId, new Date(), item, amount, registrationId]);
+	clearSheetCache();
 }
 
 function getEventRegistrationsForAdmin(idToken, eventId) {

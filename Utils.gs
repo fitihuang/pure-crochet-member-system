@@ -2,8 +2,18 @@ function getSheet(sheetName) {
 	return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
 }
 
-// 把整張表讀成物件陣列，key 是表頭文字，方便用中文欄位名直接取值
+// 同一次執行（一次 API 呼叫）內，同一張表只真的讀一次，避免迴圈裡重複讀整張表拖慢速度。
+// 任何寫入動作都要呼叫 clearSheetCache()，不然會讀到寫入前的舊資料。
+var sheetDataCache = {};
+
 function getSheetAsObjects(sheetName) {
+	if (!sheetDataCache[sheetName]) {
+		sheetDataCache[sheetName] = readSheetAsObjects(sheetName);
+	}
+	return sheetDataCache[sheetName];
+}
+
+function readSheetAsObjects(sheetName) {
 	var sheet = getSheet(sheetName);
 	var values = sheet.getDataRange().getValues();
 	var headers = values[0];
@@ -17,6 +27,10 @@ function getSheetAsObjects(sheetName) {
 		rows.push(row);
 	}
 	return rows;
+}
+
+function clearSheetCache() {
+	sheetDataCache = {};
 }
 
 function getColumnIndexByHeader(sheetName, headerName) {
@@ -51,6 +65,7 @@ function appendRowFromObject(sheetName, rowObject) {
 		var value = rowObject[header] !== undefined ? rowObject[header] : '';
 		writeCellSafely(sheet, rowNumber, index + 1, value);
 	});
+	clearSheetCache();
 }
 
 function updateRowFromObject(sheetName, rowNumber, rowObject) {
@@ -61,6 +76,7 @@ function updateRowFromObject(sheetName, rowNumber, rowObject) {
 			writeCellSafely(sheet, rowNumber, index + 1, rowObject[header]);
 		}
 	});
+	clearSheetCache();
 }
 
 // 開頭是 0 的數字字串（例如手機號碼 0919xxxxxx）強制用文字格式寫入，
