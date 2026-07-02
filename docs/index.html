@@ -4,43 +4,67 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Pure Crochet 會員系統</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 	<script src="app.js"></script>
 	<style>
-		body {
-			font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-			background: #faf7f2;
-			color: #333;
-			margin: 0;
-			padding: 16px;
+		* {
+			box-sizing: border-box;
 		}
-		h1 {
-			font-size: 18px;
+		body {
+			font-family: "Noto Sans TC", -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf6f0;
+			color: #3a3530;
+			margin: 0;
+			padding-bottom: 32px;
+		}
+		.topBar {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: #fff;
+			padding: 14px 16px;
+			box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 			margin-bottom: 16px;
+		}
+		.topBarTitle {
+			font-size: 16px;
+			font-weight: 700;
+			color: #8a5a3c;
+		}
+		.main {
+			padding: 0 16px;
+			max-width: 480px;
+			margin: 0 auto;
 		}
 		.card {
 			background: #fff;
-			border-radius: 12px;
-			padding: 16px;
+			border-radius: 16px;
+			padding: 18px;
 			margin-bottom: 16px;
-			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 		}
 		.card h2 {
 			font-size: 15px;
-			margin: 0 0 8px;
-			color: #a67c52;
+			margin: 0 0 10px;
+			color: #8a5a3c;
+			font-weight: 700;
 		}
 		.gradeTag {
 			display: inline-block;
-			background: #a67c52;
+			background: linear-gradient(135deg, #c99a6e, #a67c52);
 			color: #fff;
 			font-size: 12px;
-			padding: 2px 10px;
+			padding: 3px 12px;
 			border-radius: 999px;
 		}
 		.listItem {
-			border-bottom: 1px solid #eee;
-			padding: 8px 0;
+			border-bottom: 1px solid #f2ede6;
+			padding: 10px 0;
 			font-size: 14px;
 		}
 		.listItem:last-child {
@@ -50,21 +74,23 @@
 			background: #a67c52;
 			color: #fff;
 			border: none;
-			border-radius: 8px;
-			padding: 8px 16px;
+			border-radius: 10px;
+			padding: 10px 16px;
 			font-size: 14px;
+			cursor: pointer;
 		}
 		button:disabled {
-			background: #ccc;
+			background: #ddd6cc;
+			color: #999;
+			cursor: default;
 		}
 		input {
 			width: 100%;
-			box-sizing: border-box;
-			padding: 8px;
+			padding: 10px;
 			font-size: 14px;
-			border: 1px solid #ccc;
-			border-radius: 8px;
-			margin-bottom: 8px;
+			border: 1px solid #e0d8cc;
+			border-radius: 10px;
+			margin-bottom: 10px;
 		}
 		.errorText {
 			color: #c0392b;
@@ -72,9 +98,9 @@
 		}
 		.eventCard {
 			border: 1px solid #f0e8dd;
-			border-radius: 10px;
-			padding: 12px;
-			margin-bottom: 12px;
+			border-radius: 12px;
+			padding: 14px;
+			margin-bottom: 14px;
 		}
 		.eventCard:last-child {
 			margin-bottom: 0;
@@ -84,14 +110,15 @@
 			justify-content: space-between;
 			align-items: center;
 			margin-bottom: 6px;
+			gap: 8px;
 		}
 		.eventName {
 			font-size: 15px;
-			font-weight: bold;
+			font-weight: 700;
 		}
 		.feeTag {
 			font-size: 12px;
-			padding: 2px 8px;
+			padding: 2px 10px;
 			border-radius: 999px;
 			background: #fdf0e0;
 			color: #a67c52;
@@ -99,15 +126,15 @@
 		}
 		.freeTag {
 			font-size: 12px;
-			padding: 2px 8px;
+			padding: 2px 10px;
 			border-radius: 999px;
-			background: #e6f4ea;
-			color: #2e7d32;
+			background: #e5f1f5;
+			color: #4a7a8c;
 			white-space: nowrap;
 		}
 		.eventMeta {
 			font-size: 13px;
-			color: #777;
+			color: #8c8378;
 			margin-bottom: 10px;
 		}
 		.registerButton {
@@ -115,35 +142,68 @@
 		}
 		.eventThumb {
 			width: 100%;
-			height: 140px;
+			height: 150px;
 			object-fit: cover;
-			border-radius: 8px;
-			margin-bottom: 8px;
+			border-radius: 10px;
+			margin-bottom: 10px;
+			background: #f0ece5;
 		}
 		.detailLink {
 			display: inline-block;
 			font-size: 13px;
-			color: #a67c52;
-			margin-top: 6px;
+			color: #6a93a5;
+			margin-top: 8px;
 			text-decoration: none;
 		}
 		.logoutButton {
-			background: none;
-			color: #999;
+			background: #f2ede6;
+			color: #8a5a3c;
 			font-size: 13px;
-			padding: 4px 0;
+			padding: 6px 14px;
+			border-radius: 999px;
+		}
+		.spinnerWrap {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			padding: 60px 0;
+			color: #a89a8a;
+			font-size: 13px;
+		}
+		.spinner {
+			width: 30px;
+			height: 30px;
+			border: 3px solid #ecdfd0;
+			border-top-color: #a67c52;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
 		}
 	</style>
 </head>
 <body>
-	<h1>Pure Crochet 會員系統</h1>
-	<div id="app">初始化中...</div>
+	<div class="topBar">
+		<span class="topBarTitle">Pure Crochet 會員系統</span>
+		<button id="logoutBtn" class="logoutButton" style="display:none" onclick="logout()">登出</button>
+	</div>
+	<div class="main">
+		<div id="app">
+			<div class="spinnerWrap"><div class="spinner"></div>初始化中...</div>
+		</div>
+	</div>
 
 	<script>
 		var idToken = null;
 
 		function showApp(html) {
 			document.getElementById('app').innerHTML = html;
+		}
+
+		function showLoading(text) {
+			showApp('<div class="spinnerWrap"><div class="spinner"></div>' + (text || '載入中...') + '</div>');
 		}
 
 		function showError(message) {
@@ -158,29 +218,35 @@
 			showError('LIFF 初始化失敗：' + err);
 		});
 
+		// 會員資料跟活動列表沒有先後依賴關係，同時發出去平行等待，減少總等待時間
 		function loadProfile() {
-			showApp('載入會員資料中...');
-			callApi('getMemberProfile', { idToken: idToken })
-				.then(renderProfile)
-				.catch(function (err) { showError(err.message); });
+			showLoading('載入會員資料中...');
+			Promise.all([
+				callApi('getMemberProfile', { idToken: idToken }),
+				callApi('getEventList')
+			]).then(function (results) {
+				renderProfile(results[0], results[1]);
+			}).catch(function (err) { showError(err.message); });
 		}
 
-		function renderProfile(profile) {
+		function renderProfile(profile, events) {
 			if (profile.needBinding) {
 				renderBindingForm();
 				return;
 			}
 
+			document.getElementById('logoutBtn').style.display = 'inline-block';
+			var registeredEventIds = (profile.registrations || []).map(function (r) { return r['活動ID']; });
+
 			var html = '';
 			html += renderProfileCard(profile);
 			html += renderCouponsCard(profile.coupons);
 			html += renderRegistrationsCard(profile.registrations);
-			html += '<div id="eventsCard"></div>';
+			html += renderEventsCard(events, registeredEventIds);
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
 			showApp(html);
-			loadEvents(profile.registrations || []);
 		}
 
 		function renderProfileCard(profile) {
@@ -191,7 +257,6 @@
 				'<p>姓名：' + profile.name + '</p>' +
 				'<p>等級：<span class="gradeTag">' + gradeName + '</span></p>' +
 				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
-				'<button class="logoutButton" onclick="logout()">登出</button>' +
 				'</div>';
 		}
 
@@ -215,24 +280,12 @@
 			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
 		}
 
-		function loadEvents(myRegistrations) {
-			var registeredEventIds = myRegistrations.map(function (r) { return r['活動ID']; });
-			callApi('getEventList')
-				.then(function (events) { renderEvents(events, registeredEventIds); })
-				.catch(function (err) { showError(err.message); });
-		}
-
-		function renderEvents(events, registeredEventIds) {
-			var container = document.getElementById('eventsCard');
-			if (!container) return;
-
+		function renderEventsCard(events, registeredEventIds) {
 			if (!events || events.length === 0) {
-				container.innerHTML = '<div class="card"><h2>開放報名活動</h2><p>目前沒有開放報名的活動</p></div>';
-				return;
+				return '<div class="card"><h2>開放報名活動</h2><p>目前沒有開放報名的活動</p></div>';
 			}
-
 			var items = events.map(function (event) { return renderEventCard(event, registeredEventIds); }).join('');
-			container.innerHTML = '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
+			return '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
 		}
 
 		function renderEventCard(event, registeredEventIds) {
@@ -326,7 +379,6 @@
 			}).join('');
 			document.getElementById('allMembersTable').innerHTML = rows;
 		}
-
 	</script>
 </body>
 </html>

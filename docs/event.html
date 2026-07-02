@@ -4,37 +4,47 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>活動詳情 - Pure Crochet</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 	<script src="app.js"></script>
 	<style>
+		* {
+			box-sizing: border-box;
+		}
 		body {
-			font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-			background: #faf7f2;
-			color: #333;
+			font-family: "Noto Sans TC", -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf6f0;
+			color: #3a3530;
 			margin: 0;
 			padding: 16px;
 		}
+		.main {
+			max-width: 480px;
+			margin: 0 auto;
+		}
 		.card {
 			background: #fff;
-			border-radius: 12px;
-			padding: 16px;
-			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+			border-radius: 16px;
+			padding: 18px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 		}
 		.eventThumb {
 			width: 100%;
 			height: 220px;
 			object-fit: cover;
-			border-radius: 8px;
+			border-radius: 10px;
 			margin-bottom: 12px;
+			background: #f0ece5;
 		}
 		.eventName {
 			font-size: 20px;
-			font-weight: bold;
+			font-weight: 700;
 			margin: 0 0 8px;
 		}
 		.feeTag {
 			font-size: 12px;
-			padding: 2px 8px;
+			padding: 2px 10px;
 			border-radius: 999px;
 			background: #fdf0e0;
 			color: #a67c52;
@@ -42,20 +52,20 @@
 		}
 		.freeTag {
 			font-size: 12px;
-			padding: 2px 8px;
+			padding: 2px 10px;
 			border-radius: 999px;
-			background: #e6f4ea;
-			color: #2e7d32;
+			background: #e5f1f5;
+			color: #4a7a8c;
 			white-space: nowrap;
 		}
 		.eventMeta {
 			font-size: 14px;
-			color: #777;
+			color: #8c8378;
 			margin-bottom: 12px;
 		}
 		.eventDescription {
 			font-size: 14px;
-			line-height: 1.6;
+			line-height: 1.7;
 			white-space: pre-wrap;
 			margin-bottom: 16px;
 		}
@@ -63,13 +73,16 @@
 			background: #a67c52;
 			color: #fff;
 			border: none;
-			border-radius: 8px;
+			border-radius: 10px;
 			padding: 10px 16px;
 			font-size: 14px;
 			width: 100%;
+			cursor: pointer;
 		}
 		button:disabled {
-			background: #ccc;
+			background: #ddd6cc;
+			color: #999;
+			cursor: default;
 		}
 		.errorText {
 			color: #c0392b;
@@ -79,14 +92,36 @@
 			display: inline-block;
 			margin-bottom: 12px;
 			font-size: 13px;
-			color: #a67c52;
+			color: #6a93a5;
 			text-decoration: none;
+		}
+		.spinnerWrap {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			padding: 60px 0;
+			color: #a89a8a;
+			font-size: 13px;
+		}
+		.spinner {
+			width: 30px;
+			height: 30px;
+			border: 3px solid #ecdfd0;
+			border-top-color: #a67c52;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
 		}
 	</style>
 </head>
 <body>
-	<a class="backLink" href="index.html">← 返回會員系統</a>
-	<div id="app">初始化中...</div>
+	<div class="main">
+		<a class="backLink" href="index.html">← 返回會員系統</a>
+		<div id="app"><div class="spinnerWrap"><div class="spinner"></div>初始化中...</div></div>
+	</div>
 
 	<script>
 		var idToken = null;
@@ -113,7 +148,7 @@
 		}
 
 		function loadDetail() {
-			showApp('載入中...');
+			showApp('<div class="spinnerWrap"><div class="spinner"></div>載入中...</div>');
 			Promise.all([
 				callApi('getEventDetail', { eventId: eventId }),
 				callApi('getMemberProfile', { idToken: idToken })
