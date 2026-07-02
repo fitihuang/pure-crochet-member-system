@@ -46,10 +46,11 @@ function generateNextId(sheetName, idColumnName, prefix, padLength) {
 function appendRowFromObject(sheetName, rowObject) {
 	var sheet = getSheet(sheetName);
 	var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-	var row = headers.map(function (header) {
-		return rowObject[header] !== undefined ? rowObject[header] : '';
+	var rowNumber = sheet.getLastRow() + 1;
+	headers.forEach(function (header, index) {
+		var value = rowObject[header] !== undefined ? rowObject[header] : '';
+		writeCellSafely(sheet, rowNumber, index + 1, value);
 	});
-	sheet.appendRow(row);
 }
 
 function updateRowFromObject(sheetName, rowNumber, rowObject) {
@@ -57,9 +58,19 @@ function updateRowFromObject(sheetName, rowNumber, rowObject) {
 	var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 	headers.forEach(function (header, index) {
 		if (rowObject[header] !== undefined) {
-			sheet.getRange(rowNumber, index + 1).setValue(rowObject[header]);
+			writeCellSafely(sheet, rowNumber, index + 1, rowObject[header]);
 		}
 	});
+}
+
+// 開頭是 0 的數字字串（例如手機號碼 0919xxxxxx）強制用文字格式寫入，
+// 不然 Sheets 儲存格格式是「自動」時會被當成數字，開頭的 0 就不見了
+function writeCellSafely(sheet, row, column, value) {
+	var range = sheet.getRange(row, column);
+	if (typeof value === 'string' && /^0\d+$/.test(value)) {
+		range.setNumberFormat('@');
+	}
+	range.setValue(value);
 }
 
 function todayAtMidnight() {
