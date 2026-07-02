@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>活動詳情 - Pure Crochet</title>
+	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+	<script src="app.js"></script>
+	<style>
+		body {
+			font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf7f2;
+			color: #333;
+			margin: 0;
+			padding: 16px;
+		}
+		.card {
+			background: #fff;
+			border-radius: 12px;
+			padding: 16px;
+			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+		}
+		.eventThumb {
+			width: 100%;
+			height: 220px;
+			object-fit: cover;
+			border-radius: 8px;
+			margin-bottom: 12px;
+		}
+		.eventName {
+			font-size: 20px;
+			font-weight: bold;
+			margin: 0 0 8px;
+		}
+		.feeTag {
+			font-size: 12px;
+			padding: 2px 8px;
+			border-radius: 999px;
+			background: #fdf0e0;
+			color: #a67c52;
+			white-space: nowrap;
+		}
+		.freeTag {
+			font-size: 12px;
+			padding: 2px 8px;
+			border-radius: 999px;
+			background: #e6f4ea;
+			color: #2e7d32;
+			white-space: nowrap;
+		}
+		.eventMeta {
+			font-size: 14px;
+			color: #777;
+			margin-bottom: 12px;
+		}
+		.eventDescription {
+			font-size: 14px;
+			line-height: 1.6;
+			white-space: pre-wrap;
+			margin-bottom: 16px;
+		}
+		button {
+			background: #a67c52;
+			color: #fff;
+			border: none;
+			border-radius: 8px;
+			padding: 10px 16px;
+			font-size: 14px;
+			width: 100%;
+		}
+		button:disabled {
+			background: #ccc;
+		}
+		.errorText {
+			color: #c0392b;
+			font-size: 14px;
+		}
+		.backLink {
+			display: inline-block;
+			margin-bottom: 12px;
+			font-size: 13px;
+			color: #a67c52;
+			text-decoration: none;
+		}
+	</style>
+</head>
+<body>
+	<a class="backLink" href="index.html">← 返回會員系統</a>
+	<div id="app">初始化中...</div>
+
+	<script>
+		var idToken = null;
+		var eventId = new URLSearchParams(location.search).get('eventId');
+
+		function showApp(html) {
+			document.getElementById('app').innerHTML = html;
+		}
+
+		function showError(message) {
+			showApp('<p class="errorText">' + message + '</p>');
+		}
+
+		if (!eventId) {
+			showError('缺少活動代碼');
+		} else {
+			initLiff().then(function (token) {
+				if (!token) return;
+				idToken = token;
+				loadDetail();
+			}).catch(function (err) {
+				showError('LIFF 初始化失敗：' + err);
+			});
+		}
+
+		function loadDetail() {
+			showApp('載入中...');
+			Promise.all([
+				callApi('getEventDetail', { eventId: eventId }),
+				callApi('getMemberProfile', { idToken: idToken })
+			]).then(function (results) {
+				renderDetail(results[0], results[1]);
+			}).catch(function (err) {
+				showError(err.message);
+			});
+		}
+
+		function renderDetail(event, profile) {
+			var feeHtml = event['是否付費'] === '是'
+				? '<span class="feeTag">💰 $' + event['費用'] + '</span>'
+				: '<span class="freeTag">免費</span>';
+
+			var registrations = (profile && profile.registrations) || [];
+			var isRegistered = registrations.some(function (r) { return r['活動ID'] === event['活動ID']; });
+			var isFull = event['VIP剩餘名額'] <= 0 && event['一般剩餘名額'] <= 0;
+
+			var buttonHtml;
+			if (profile && profile.needBinding) {
+				buttonHtml = '<button disabled>請先到會員系統完成帳號綁定</button>';
+			} else if (isRegistered) {
+				buttonHtml = '<button disabled>已報名</button>';
+			} else if (isFull) {
+				buttonHtml = '<button disabled>已額滿</button>';
+			} else {
+				buttonHtml = '<button onclick="register()">報名</button>';
+			}
+
+			var thumbHtml = event['活動封面圖片網址']
+				? '<img class="eventThumb" src="' + event['活動封面圖片網址'] + '">'
+				: '';
+			var descriptionHtml = event['活動說明']
+				? '<div class="eventDescription">' + event['活動說明'] + '</div>'
+				: '';
+
+			showApp('' +
+				'<div class="card">' +
+				thumbHtml +
+				'<div class="eventName">' + event['活動名稱'] + '</div>' +
+				'<div style="margin-bottom: 8px;">' + feeHtml + '</div>' +
+				'<div class="eventMeta">📅 活動日期：' + formatDate(event['活動日期']) + '<br>⏰ 報名截止：' + formatDate(event['報名截止日']) + '</div>' +
+				descriptionHtml +
+				buttonHtml +
+				'</div>'
+			);
+		}
+
+		function register() {
+			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
+				.then(function () {
+					alert('報名成功！');
+					loadDetail();
+				})
+				.catch(function (err) { alert('報名失敗：' + err.message); });
+		}
+	</script>
+</body>
+</html>

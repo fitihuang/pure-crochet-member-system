@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Pure Crochet 會員系統</title>
 	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+	<script src="app.js"></script>
 	<style>
 		body {
 			font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
@@ -109,45 +110,28 @@
 			color: #777;
 			margin-bottom: 10px;
 		}
-		.quotaRow {
-			display: flex;
-			gap: 12px;
-			margin-bottom: 10px;
-		}
-		.quotaItem {
-			flex: 1;
-		}
-		.quotaLabelRow {
-			display: flex;
-			justify-content: space-between;
-			font-size: 12px;
-			margin-bottom: 4px;
-		}
-		.quotaLabel.vip {
-			color: #a67c52;
-			font-weight: bold;
-		}
-		.quotaLabel.general {
-			color: #888;
-		}
-		.quotaBar {
-			background: #f0ece5;
-			border-radius: 999px;
-			height: 6px;
-			overflow: hidden;
-		}
-		.quotaBarFill {
-			height: 100%;
-			border-radius: 999px;
-		}
-		.quotaBarFill.vip {
-			background: #a67c52;
-		}
-		.quotaBarFill.general {
-			background: #c9c2b8;
-		}
 		.registerButton {
 			width: 100%;
+		}
+		.eventThumb {
+			width: 100%;
+			height: 140px;
+			object-fit: cover;
+			border-radius: 8px;
+			margin-bottom: 8px;
+		}
+		.detailLink {
+			display: inline-block;
+			font-size: 13px;
+			color: #a67c52;
+			margin-top: 6px;
+			text-decoration: none;
+		}
+		.logoutButton {
+			background: none;
+			color: #999;
+			font-size: 13px;
+			padding: 4px 0;
 		}
 	</style>
 </head>
@@ -156,23 +140,7 @@
 	<div id="app">初始化中...</div>
 
 	<script>
-		var LIFF_ID = '2010573490-GEPNAkkX';
-		var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwRwRWP3OZkejgRm-SCu9q3Ac7KciJGnVgWJB-zfMPZ2WaWXmmYCwEo7FxS7cPNfUA8Xg/exec';
 		var idToken = null;
-
-		function callApi(action, params) {
-			var payload = Object.assign({ action: action }, params || {});
-			return fetch(WEB_APP_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-				body: JSON.stringify(payload)
-			})
-				.then(function (res) { return res.json(); })
-				.then(function (result) {
-					if (result && result.error) throw new Error(result.error);
-					return result;
-				});
-		}
 
 		function showApp(html) {
 			document.getElementById('app').innerHTML = html;
@@ -182,12 +150,9 @@
 			showApp('<p class="errorText">' + message + '</p>');
 		}
 
-		liff.init({ liffId: LIFF_ID }).then(function () {
-			if (!liff.isLoggedIn()) {
-				liff.login();
-				return;
-			}
-			idToken = liff.getIDToken();
+		initLiff().then(function (token) {
+			if (!token) return;
+			idToken = token;
 			loadProfile();
 		}).catch(function (err) {
 			showError('LIFF 初始化失敗：' + err);
@@ -215,7 +180,7 @@
 				html += renderAdminCard();
 			}
 			showApp(html);
-			loadEvents();
+			loadEvents(profile.registrations || []);
 		}
 
 		function renderProfileCard(profile) {
@@ -226,6 +191,7 @@
 				'<p>姓名：' + profile.name + '</p>' +
 				'<p>等級：<span class="gradeTag">' + gradeName + '</span></p>' +
 				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
+				'<button class="logoutButton" onclick="logout()">登出</button>' +
 				'</div>';
 		}
 
@@ -249,13 +215,14 @@
 			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
 		}
 
-		function loadEvents() {
+		function loadEvents(myRegistrations) {
+			var registeredEventIds = myRegistrations.map(function (r) { return r['活動ID']; });
 			callApi('getEventList')
-				.then(renderEvents)
+				.then(function (events) { renderEvents(events, registeredEventIds); })
 				.catch(function (err) { showError(err.message); });
 		}
 
-		function renderEvents(events) {
+		function renderEvents(events, registeredEventIds) {
 			var container = document.getElementById('eventsCard');
 			if (!container) return;
 
@@ -264,39 +231,37 @@
 				return;
 			}
 
-			var items = events.map(renderEventCard).join('');
+			var items = events.map(function (event) { return renderEventCard(event, registeredEventIds); }).join('');
 			container.innerHTML = '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
 		}
 
-		function renderEventCard(event) {
+		function renderEventCard(event, registeredEventIds) {
 			var feeHtml = event['是否付費'] === '是'
 				? '<span class="feeTag">💰 $' + event['費用'] + '</span>'
 				: '<span class="freeTag">免費</span>';
 
+			var isRegistered = registeredEventIds.indexOf(event['活動ID']) !== -1;
 			var isFull = event['VIP剩餘名額'] <= 0 && event['一般剩餘名額'] <= 0;
-			var buttonHtml = isFull
-				? '<button class="registerButton" disabled>已額滿</button>'
-				: '<button class="registerButton" onclick="register(\'' + event['活動ID'] + '\')">報名</button>';
+			var buttonHtml;
+			if (isRegistered) {
+				buttonHtml = '<button class="registerButton" disabled>已報名</button>';
+			} else if (isFull) {
+				buttonHtml = '<button class="registerButton" disabled>已額滿</button>';
+			} else {
+				buttonHtml = '<button class="registerButton" onclick="register(\'' + event['活動ID'] + '\')">報名</button>';
+			}
+
+			var thumbHtml = event['活動封面圖片網址']
+				? '<img class="eventThumb" src="' + event['活動封面圖片網址'] + '">'
+				: '';
 
 			return '' +
 				'<div class="eventCard">' +
+				thumbHtml +
 				'<div class="eventHeader"><span class="eventName">' + event['活動名稱'] + '</span>' + feeHtml + '</div>' +
 				'<div class="eventMeta">📅 ' + formatDate(event['活動日期']) + '　⏰ 報名截止 ' + formatDate(event['報名截止日']) + '</div>' +
-				'<div class="quotaRow">' +
-				renderQuotaBar('vip', 'VIP', event['VIP保留名額'], event['VIP剩餘名額']) +
-				renderQuotaBar('general', '一般', event['一般名額'], event['一般剩餘名額']) +
-				'</div>' +
 				buttonHtml +
-				'</div>';
-		}
-
-		function renderQuotaBar(type, label, total, remaining) {
-			var used = total - remaining;
-			var percent = total > 0 ? Math.round((used / total) * 100) : 0;
-			return '' +
-				'<div class="quotaItem">' +
-				'<div class="quotaLabelRow"><span class="quotaLabel ' + type + '">' + label + '</span><span>' + used + '/' + total + '</span></div>' +
-				'<div class="quotaBar"><div class="quotaBarFill ' + type + '" style="width:' + percent + '%"></div></div>' +
+				'<br><a class="detailLink" href="event.html?eventId=' + event['活動ID'] + '">查看詳情 →</a>' +
 				'</div>';
 		}
 
@@ -362,11 +327,6 @@
 			document.getElementById('allMembersTable').innerHTML = rows;
 		}
 
-		function formatDate(value) {
-			if (!value) return '';
-			var date = new Date(value);
-			return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
-		}
 	</script>
 </body>
 </html>

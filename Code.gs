@@ -25,6 +25,9 @@ function handleApiRequest(action, params) {
 			case 'getEventList':
 				result = getEventList();
 				break;
+			case 'getEventDetail':
+				result = getEventDetail(params.eventId);
+				break;
 			case 'submitRegistration':
 				result = submitRegistration(params.idToken, params.eventId);
 				break;

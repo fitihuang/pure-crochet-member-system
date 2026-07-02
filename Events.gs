@@ -17,6 +17,12 @@ function decorateEventWithRemainingQuota(event) {
 	return event;
 }
 
+function getEventDetail(eventId) {
+	var event = findEventById(eventId);
+	if (!event) throw new Error('找不到該活動');
+	return decorateEventWithRemainingQuota(event);
+}
+
 function findEventById(eventId) {
 	var events = getSheetAsObjects('Events');
 	for (var i = 0; i < events.length; i++) {
