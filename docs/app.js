@@ -20,6 +20,10 @@ function initLiff() {
 	return liff.init({ liffId: LIFF_ID });
 }
 
+// 頁面一載入就先偷打一次不重要的 API，讓 Apps Script 有機會提前開始執行，
+// 減少使用者真正登入完成、要抓資料時遇到冷啟動延遲。失敗也沒關係，不影響後續流程
+callApi('getEventList').catch(function () {});
+
 function formatDate(value) {
 	if (!value) return '';
 	var date = new Date(value);
