@@ -60,9 +60,6 @@ function handleApiRequest(action, params) {
 			case 'checkAllMembersUpgrade':
 				result = checkAllMembersUpgrade(params.idToken);
 				break;
-			case 'redeemCoupon':
-				result = redeemCoupon(params.idToken, params.couponId, params.registrationId);
-				break;
 			case 'getGradeList':
 				result = getGradeList();
 				break;

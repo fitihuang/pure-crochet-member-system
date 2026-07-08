@@ -320,7 +320,7 @@
 			showApp('' +
 				'<div class="card" style="text-align:center;">' +
 				'<h2>歡迎使用 Pure Crochet 會員系統</h2>' +
-				'<p>登入後可查看你的會員等級、優惠券與報名紀錄</p>' +
+				'<p>登入後可查看你的會員等級與報名紀錄</p>' +
 				'<button onclick="liff.login()">使用 LINE 登入</button>' +
 				'</div>'
 			);
@@ -348,7 +348,6 @@
 
 			var html = '';
 			html += renderProfileCard(profile);
-			html += renderCouponsCard(profile.coupons);
 			html += renderCalendarCard(events);
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderEventsCard(events, registeredEventIds);
@@ -384,16 +383,6 @@
 			span.className = 'gradeTag';
 			span.textContent = name;
 			return span;
-		}
-
-		function renderCouponsCard(coupons) {
-			if (!coupons || coupons.length === 0) {
-				return '<div class="card"><h2>我的優惠券</h2><p>目前沒有優惠券</p></div>';
-			}
-			var items = coupons.map(function (c) {
-				return '<div class="listItem">$' + c['金額'] + '　' + c['狀態'] + '　到期日：' + formatDate(c['到期日']) + '</div>';
-			}).join('');
-			return '<div class="card"><h2>我的優惠券</h2>' + items + '</div>';
 		}
 
 		function renderRegistrationsCard(registrations) {

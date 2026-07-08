@@ -13,7 +13,6 @@ function getMemberProfile(idToken) {
 		paidCount: member['累積付費活動次數'],
 		grade: getGradeById(member['會員等級ID']),
 		registrations: getMemberRegistrations(member['會員ID']),
-		coupons: getMemberCoupons(member['會員ID']),
 		purchases: getMemberPurchases(member['會員ID'])
 	};
 	if (auth.isAdmin) {
@@ -132,10 +131,6 @@ function getMemberRegistrations(memberId) {
 			r['活動名稱'] = event ? event['活動名稱'] : r['活動ID'];
 			return r;
 		});
-}
-
-function getMemberCoupons(memberId) {
-	return getSheetAsObjects('Coupons').filter(function (c) { return c['會員ID'] === memberId; });
 }
 
 function getMemberPurchases(memberId) {
