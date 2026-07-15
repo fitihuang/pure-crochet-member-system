@@ -39,6 +39,12 @@ function toDateInputValue(value) {
 	return date.getFullYear() + '-' + month + '-' + day;
 }
 
+// 依會員自己的等級決定顯示哪個價格
+function getDisplayPrice(event, grade) {
+	var isGold = grade && grade['會員等級名稱'] === '金牌會員';
+	return isGold ? event['金牌會員費用'] : event['一般會員費用'];
+}
+
 function logout() {
 	liff.logout();
 	location.reload();

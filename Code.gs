@@ -66,6 +66,9 @@ function handleApiRequest(action, params) {
 			case 'uploadImageToImgbb':
 				result = uploadImageToImgbb(params.idToken, params.base64Image);
 				break;
+			case 'getSettings':
+				result = getSettings();
+				break;
 			default:
 				result = { error: '未知的 action: ' + action };
 		}

@@ -289,7 +289,7 @@
 			showApp('' +
 				'<div class="card" id="memberSection">' +
 				'<h2>會員管理</h2>' +
-				'<button class="secondaryButton smallButton" onclick="runUpgradeCheck()">立即檢查升等</button>' +
+				'<button class="secondaryButton smallButton" onclick="runUpgradeCheck()">重新計算付費次數</button>' +
 				'<div id="memberFormArea">' + renderMemberForm(null) + '</div>' +
 				'<div id="memberListArea">' + renderMemberList() + '</div>' +
 				'</div>' +
@@ -303,14 +303,14 @@
 		}
 
 		function runUpgradeCheck() {
-			showLockOverlay('檢查升等中...');
+			showLockOverlay('計算中...');
 			callApi('checkAllMembersUpgrade', { idToken: idToken }).then(function () {
 				return callApi('getAllMembers', { idToken: idToken });
 			}).then(function (members) {
 				memberList = members;
 				document.getElementById('memberListArea').innerHTML = renderMemberList();
 				hideLockOverlay();
-				alert('升等檢查完成');
+				alert('付費次數已更新（會員等級請直接在下方編輯表單手動指定）');
 			}).catch(function (err) {
 				hideLockOverlay();
 				alert(err.message);
@@ -416,12 +416,15 @@
 				'<option value="是"' + (isEdit && event['是否付費'] === '是' ? ' selected' : '') + '>是</option>' +
 				'<option value="否"' + (isEdit && event['是否付費'] === '否' ? ' selected' : '') + '>否</option>' +
 				'</select></div>' +
-				'<div><span class="fieldLabel">費用</span><input id="eventFeeInput" type="number" value="' + (isEdit ? event['費用'] : '0') + '"></div>' +
 				'<div><span class="fieldLabel">狀態</span><select id="eventStatusInput">' +
 				['開放報名', '已截止', '已額滿'].map(function (s) {
 					return '<option value="' + s + '"' + (isEdit && event['狀態'] === s ? ' selected' : '') + '>' + s + '</option>';
 				}).join('') +
 				'</select></div>' +
+				'</div>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">一般會員費用</span><input id="eventFeeGeneralInput" type="number" value="' + (isEdit ? event['一般會員費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">金牌會員費用</span><input id="eventFeeGoldInput" type="number" value="' + (isEdit ? event['金牌會員費用'] : '0') + '"></div>' +
 				'</div>' +
 				'<span class="fieldLabel">活動說明</span>' +
 				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動說明'] || '') : '') + '</textarea>' +
@@ -476,7 +479,8 @@
 				'VIP保留名額': Number(document.getElementById('eventVipQuotaInput').value),
 				'一般名額': Number(document.getElementById('eventGeneralQuotaInput').value),
 				'是否付費': document.getElementById('eventIsPaidInput').value,
-				'費用': Number(document.getElementById('eventFeeInput').value),
+				'一般會員費用': Number(document.getElementById('eventFeeGeneralInput').value),
+				'金牌會員費用': Number(document.getElementById('eventFeeGoldInput').value),
 				'狀態': document.getElementById('eventStatusInput').value,
 				'活動說明': document.getElementById('eventDescriptionInput').value,
 				'活動封面圖片網址': document.getElementById('eventImageInput').value

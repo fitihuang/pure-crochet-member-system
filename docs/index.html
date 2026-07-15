@@ -225,6 +225,7 @@
 			background: #fdf0e0;
 			color: #a67c52;
 			font-weight: 700;
+			cursor: pointer;
 		}
 		.calendarDay.hasEvent::after {
 			content: '';
@@ -331,13 +332,14 @@
 			showLoading('載入會員資料中...');
 			Promise.all([
 				callApi('getMemberProfile', { idToken: idToken }),
-				callApi('getEventList')
+				callApi('getEventList'),
+				callApi('getSettings')
 			]).then(function (results) {
-				renderProfile(results[0], results[1]);
+				renderProfile(results[0], results[1], results[2]);
 			}).catch(function (err) { showError(err.message); });
 		}
 
-		function renderProfile(profile, events) {
+		function renderProfile(profile, events, settings) {
 			if (profile.needBinding) {
 				renderBindingForm();
 				return;
@@ -348,13 +350,20 @@
 
 			var html = '';
 			html += renderProfileCard(profile);
+			html += renderPaymentInfoCard(settings);
 			html += renderCalendarCard(events);
 			html += renderRegistrationsCard(profile.registrations);
-			html += renderEventsCard(events, registeredEventIds);
+			html += renderEventsCard(events, registeredEventIds, profile.grade);
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
 			showApp(html);
+		}
+
+		function renderPaymentInfoCard(settings) {
+			var text = settings && settings['付款資訊'];
+			if (!text) return '';
+			return '<div class="card"><h2>付款資訊</h2><p style="white-space:pre-wrap;">' + text + '</p></div>';
 		}
 
 		function renderProfileCard(profile) {
@@ -385,17 +394,52 @@
 			return span;
 		}
 
+		// 依活動時間新到舊排序（後端已排好），一頁最多 5 筆，超過的用分頁按鈕切換
+		var REGISTRATIONS_PAGE_SIZE = 5;
+		var registrationsData = [];
+		var registrationsPage = 0;
+
 		function renderRegistrationsCard(registrations) {
-			if (!registrations || registrations.length === 0) {
+			registrationsData = registrations || [];
+			registrationsPage = 0;
+			if (registrationsData.length === 0) {
 				return '<div class="card"><h2>我的報名紀錄</h2><p>目前沒有報名紀錄</p></div>';
 			}
-			var items = registrations.map(function (r) {
+			return '<div class="card" id="registrationsCard">' + buildRegistrationsHtml() + '</div>';
+		}
+
+		function buildRegistrationsHtml() {
+			var totalPages = Math.ceil(registrationsData.length / REGISTRATIONS_PAGE_SIZE);
+			var start = registrationsPage * REGISTRATIONS_PAGE_SIZE;
+			var pageItems = registrationsData.slice(start, start + REGISTRATIONS_PAGE_SIZE);
+
+			var items = pageItems.map(function (r) {
 				var paidTag = r['是否付費'] === '是'
 					? '<span class="paidTag">✅ 已付費</span>'
 					: '<span class="unpaidTag">⏳ 未付費</span>';
-				return '<div class="listItem">' + r['活動名稱'] + paidTag + '<br>報名時間：' + formatDate(r['報名時間']) + '</div>';
+				return '' +
+					'<div class="listItem">' + r['活動名稱'] + paidTag + '<br>' +
+					'活動時間：' + formatDate(r['活動日期']) + '　報名時間：' + formatDate(r['報名時間']) +
+					'</div>';
 			}).join('');
-			return '<div class="card"><h2>我的報名紀錄</h2>' + items + '</div>';
+
+			var pagerHtml = '';
+			if (totalPages > 1) {
+				pagerHtml = '' +
+					'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">' +
+					'<button class="calendarNavBtn" onclick="changeRegistrationsPage(-1)"' + (registrationsPage === 0 ? ' disabled' : '') + '>‹</button>' +
+					'<span style="font-size:12px;color:#8c8378;">' + (registrationsPage + 1) + ' / ' + totalPages + '</span>' +
+					'<button class="calendarNavBtn" onclick="changeRegistrationsPage(1)"' + (registrationsPage >= totalPages - 1 ? ' disabled' : '') + '>›</button>' +
+					'</div>';
+			}
+
+			return '<h2>我的報名紀錄</h2>' + items + pagerHtml;
+		}
+
+		function changeRegistrationsPage(delta) {
+			var totalPages = Math.ceil(registrationsData.length / REGISTRATIONS_PAGE_SIZE);
+			registrationsPage = Math.max(0, Math.min(totalPages - 1, registrationsPage + delta));
+			document.getElementById('registrationsCard').innerHTML = buildRegistrationsHtml();
 		}
 
 		// 簡單版行事曆：用已經抓回來的活動列表在前端算格子，換月不用重打 API
@@ -418,7 +462,9 @@
 			calendarEvents.forEach(function (event) {
 				var d = new Date(event['活動日期']);
 				if (d.getFullYear() === calendarYear && d.getMonth() === calendarMonth) {
-					eventDays[d.getDate()] = true;
+					var day = d.getDate();
+					if (!eventDays[day]) eventDays[day] = [];
+					eventDays[day].push(event);
 				}
 			});
 
@@ -431,8 +477,11 @@
 				cells += '<div></div>';
 			}
 			for (var day = 1; day <= daysInMonth; day++) {
-				var cls = eventDays[day] ? 'calendarDay hasEvent' : 'calendarDay';
-				cells += '<div class="' + cls + '">' + day + '</div>';
+				if (eventDays[day]) {
+					cells += '<div class="calendarDay hasEvent" onclick="showCalendarDayEvents(' + day + ')">' + day + '</div>';
+				} else {
+					cells += '<div class="calendarDay">' + day + '</div>';
+				}
 			}
 
 			return '' +
@@ -441,7 +490,8 @@
 				'<h2>' + calendarYear + '年' + (calendarMonth + 1) + '月</h2>' +
 				'<button class="calendarNavBtn" onclick="changeCalendarMonth(1)">›</button>' +
 				'</div>' +
-				'<div class="calendarGrid">' + weekdayLabels + cells + '</div>';
+				'<div class="calendarGrid">' + weekdayLabels + cells + '</div>' +
+				'<div id="calendarDayEvents"></div>';
 		}
 
 		function changeCalendarMonth(delta) {
@@ -451,17 +501,28 @@
 			document.getElementById('calendarCard').innerHTML = buildCalendarHtml();
 		}
 
-		function renderEventsCard(events, registeredEventIds) {
+		function showCalendarDayEvents(day) {
+			var dayEvents = calendarEvents.filter(function (event) {
+				var d = new Date(event['活動日期']);
+				return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth && d.getDate() === day;
+			});
+			var items = dayEvents.map(function (event) {
+				return '<div class="listItem"><a class="detailLink" href="event.html?eventId=' + event['活動ID'] + '">' + event['活動名稱'] + ' →</a></div>';
+			}).join('');
+			document.getElementById('calendarDayEvents').innerHTML = items;
+		}
+
+		function renderEventsCard(events, registeredEventIds, grade) {
 			if (!events || events.length === 0) {
 				return '<div class="card"><h2>開放報名活動</h2><p>目前沒有開放報名的活動</p></div>';
 			}
-			var items = events.map(function (event) { return renderEventCard(event, registeredEventIds); }).join('');
+			var items = events.map(function (event) { return renderEventCard(event, registeredEventIds, grade); }).join('');
 			return '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
 		}
 
-		function renderEventCard(event, registeredEventIds) {
+		function renderEventCard(event, registeredEventIds, grade) {
 			var feeHtml = event['是否付費'] === '是'
-				? '<span class="feeTag">💰 $' + event['費用'] + '</span>'
+				? '<span class="feeTag">💰 $' + getDisplayPrice(event, grade) + '</span>'
 				: '<span class="freeTag">免費</span>';
 
 			var isRegistered = registeredEventIds.indexOf(event['活動ID']) !== -1;

@@ -22,14 +22,15 @@ function runSubmitRegistration(memberId, eventId) {
 
 	var gradeId = member['會員等級ID'];
 	assertQuotaAvailable(event, gradeId);
+	var price = getEventPriceForGrade(event, gradeId);
 
 	// 報名當下先預設「否」，是否已實際收款由負責人之後手動在 Sheet 上確認標註
 	var registrationId = generateNextId('Registrations', '報名ID', 'R', 4);
-	appendRegistrationRow(registrationId, memberId, eventId, gradeId, '否', event['費用']);
+	appendRegistrationRow(registrationId, memberId, eventId, gradeId, '否', price);
 
 	if (event['是否付費'] === '是') {
 		var purchaseId = generateNextId('Purchases', '消費ID', 'P', 4);
-		appendPurchaseRow(purchaseId, memberId, event['活動名稱'], event['費用'], registrationId);
+		appendPurchaseRow(purchaseId, memberId, event['活動名稱'], price, registrationId);
 	}
 
 	return { success: true, registrationId: registrationId };

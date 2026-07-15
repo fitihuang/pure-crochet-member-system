@@ -92,6 +92,7 @@ function updateMember(idToken, memberId, memberData) {
 }
 
 // Admin 手動按鈕呼叫的入口，需要驗證身份；定時觸發器請直接呼叫 runMemberUpgradeCheck
+// 會員等級改由管理者手動指定（見 updateMember），這支只負責重新統計付費次數，不會再自動改等級
 function checkAllMembersUpgrade(idToken) {
 	var auth = verifyLineToken(idToken);
 	if (!auth.isAdmin) throw new Error('沒有權限');
@@ -102,17 +103,11 @@ function checkAllMembersUpgrade(idToken) {
 function runMemberUpgradeCheck() {
 	var sheet = getSheet('Members');
 	var members = getSheetAsObjects('Members');
-	var gradeColumn = getColumnIndexByHeader('Members', '會員等級ID');
 	var paidCountColumn = getColumnIndexByHeader('Members', '累積付費活動次數');
 
 	members.forEach(function (member) {
 		var paidCount = countPaidRegistrations(member['會員ID']);
 		sheet.getRange(member._rowNumber, paidCountColumn).setValue(paidCount);
-
-		var newGrade = determineGradeByPaidCount(paidCount);
-		if (newGrade && newGrade['會員等級ID'] !== member['會員等級ID']) {
-			sheet.getRange(member._rowNumber, gradeColumn).setValue(newGrade['會員等級ID']);
-		}
 	});
 	clearSheetCache();
 }
@@ -129,8 +124,10 @@ function getMemberRegistrations(memberId) {
 		.map(function (r) {
 			var event = findEventById(r['活動ID']);
 			r['活動名稱'] = event ? event['活動名稱'] : r['活動ID'];
+			r['活動日期'] = event ? event['活動日期'] : null;
 			return r;
-		});
+		})
+		.sort(function (a, b) { return new Date(b['活動日期']) - new Date(a['活動日期']); });
 }
 
 function getMemberPurchases(memberId) {

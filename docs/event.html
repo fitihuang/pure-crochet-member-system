@@ -197,7 +197,7 @@
 
 		function renderDetail(event, profile) {
 			var feeHtml = event['是否付費'] === '是'
-				? '<span class="feeTag">💰 $' + event['費用'] + '</span>'
+				? '<span class="feeTag">💰 $' + getDisplayPrice(event, profile && profile.grade) + '</span>'
 				: '<span class="freeTag">免費</span>';
 
 			var registrations = (profile && profile.registrations) || [];

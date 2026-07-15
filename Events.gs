@@ -1,6 +1,9 @@
 function getEventList() {
+	var today = todayAtMidnight();
 	return getSheetAsObjects('Events')
-		.filter(function (event) { return event['狀態'] === '開放報名'; })
+		.filter(function (event) {
+			return event['狀態'] === '開放報名' && new Date(event['活動日期']) >= today;
+		})
 		.map(decorateEventWithRemainingQuota);
 }
 
@@ -56,6 +59,12 @@ function updateEvent(idToken, eventId, eventData) {
 function convertEventDateFields(data) {
 	if (data['活動日期']) data['活動日期'] = new Date(data['活動日期']);
 	if (data['報名截止日']) data['報名截止日'] = new Date(data['報名截止日']);
+}
+
+// 金牌會員跟一般會員是兩個不同價格欄位，依報名者當下的等級決定要用哪一個
+function getEventPriceForGrade(event, gradeId) {
+	var vipGradeId = getGradeIdByName('金牌會員');
+	return (gradeId === vipGradeId) ? event['金牌會員費用'] : event['一般會員費用'];
 }
 
 function findEventById(eventId) {
