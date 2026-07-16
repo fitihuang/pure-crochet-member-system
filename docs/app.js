@@ -8,8 +8,16 @@ function callApi(action, params) {
 		headers: { 'Content-Type': 'text/plain;charset=utf-8' },
 		body: JSON.stringify(payload)
 	})
-		.then(function (res) { return res.json(); })
-		.then(function (result) {
+		.then(function (res) { return res.text(); })
+		.then(function (text) {
+			var result;
+			try {
+				result = JSON.parse(text);
+			} catch (e) {
+				// Apps Script 偶爾會回傳一整頁 HTML 而不是 JSON（伺服器端不穩定，不是我們的程式碼壞了）。
+				// 不自動重試，因為如果是「新增/修改」這類操作，重試有可能造成重複寫入，交給使用者自己判斷再手動重試
+				throw new Error('伺服器回應異常，請確認這個操作是否已經成功執行（避免重複送出），稍後再試一次');
+			}
 			if (result && result.error) throw new Error(result.error);
 			return result;
 		});
