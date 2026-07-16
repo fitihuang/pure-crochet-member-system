@@ -62,7 +62,7 @@ function appendRegistrationRow(registrationId, memberId, eventId, gradeId, isPai
 	// 「報名時等級snapshot」跟「佔用名額類別」目前存的是同一個等級ID，
 	// 分開兩欄是為了保留歷史紀錄跟名額歸屬各自的意義，之後等級規則變複雜時才不用大改
 	getSheet('Registrations').appendRow(
-		[registrationId, memberId, eventId, new Date(), gradeId, gradeId, isPaid, amount, '']
+		[registrationId, memberId, eventId, new Date(), gradeId, gradeId, isPaid, amount]
 	);
 	clearSheetCache();
 }
