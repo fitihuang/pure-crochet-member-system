@@ -17,12 +17,6 @@ function testGetEventList() {
 	Logger.log(JSON.stringify(getEventList(), null, 2));
 }
 
-function testDetermineGrade() {
-	Logger.log('付費0次 -> ' + JSON.stringify(determineGradeByPaidCount(0)));
-	Logger.log('付費3次 -> ' + JSON.stringify(determineGradeByPaidCount(3)));
-	Logger.log('付費5次 -> ' + JSON.stringify(determineGradeByPaidCount(5)));
-}
-
 // 用 M0001 報名 E0001，跳過 LINE 登入驗證，直接測報名的核心邏輯
 function testSubmitRegistration() {
 	Logger.log(JSON.stringify(runSubmitRegistration('M0001', 'E0001')));
