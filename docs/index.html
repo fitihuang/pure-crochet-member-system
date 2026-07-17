@@ -341,7 +341,7 @@
 
 		function renderProfile(profile, events, settings) {
 			if (profile.needBinding) {
-				renderBindingForm();
+				renderBindingForm(profile.isAdmin);
 				return;
 			}
 
@@ -371,14 +371,12 @@
 		}
 
 		function renderProfileCard(profile) {
-			var myLineUserId = liff.getDecodedIDToken() ? liff.getDecodedIDToken().sub : '';
 			return '' +
 				'<div class="card">' +
 				'<h2>我的資料</h2>' +
 				'<p>姓名：' + profile.name + '</p>' +
 				'<p>等級：' + renderGradeBadge(profile.grade) + '</p>' +
 				'<p>累積付費活動次數：' + profile.paidCount + '</p>' +
-				'<p style="font-size:12px;color:#a89a8a;">LINE ID（設定管理員用）：' + myLineUserId + '</p>' +
 				'</div>';
 		}
 
@@ -587,8 +585,10 @@
 				});
 		}
 
-		function renderBindingForm() {
+		// 管理員身分跟有沒有綁定會員資料是分開判斷的，就算還沒綁定會員也要能直接進後台
+		function renderBindingForm(isAdmin) {
 			showApp('' +
+				(isAdmin ? renderAdminCard() : '') +
 				'<div class="card">' +
 				'<h2>第一次登入，請完成綁定</h2>' +
 				'<p>請輸入你在會員資料留的手機或 Email：</p>' +

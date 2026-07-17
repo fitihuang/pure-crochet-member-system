@@ -4,7 +4,9 @@ import { findEventById } from './events.js';
 export async function getMemberProfile(sheets, auth) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
 	if (!member) {
-		return { needBinding: true };
+		// 管理員身分是看 ADMIN_LINE_USER_IDS，跟有沒有綁定會員資料無關，
+		// 沒綁定也要能拿到 isAdmin，不然管理員在還沒綁定會員時會被擋在後台外
+		return { needBinding: true, isAdmin: auth.isAdmin };
 	}
 
 	const profile = {
