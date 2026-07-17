@@ -1,5 +1,7 @@
 var LIFF_ID = '2010573490-GEPNAkkX';
-var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwRwRWP3OZkejgRm-SCu9q3Ac7KciJGnVgWJB-zfMPZ2WaWXmmYCwEo7FxS7cPNfUA8Xg/exec';
+// 暫時指向 Cloudflare Workers 新版後端做測試，確認沒問題後這行會是正式版本
+// 舊版 Apps Script 網址：https://script.google.com/macros/s/AKfycbwRwRWP3OZkejgRm-SCu9q3Ac7KciJGnVgWJB-zfMPZ2WaWXmmYCwEo7FxS7cPNfUA8Xg/exec
+var WEB_APP_URL = 'https://pure-crochet-backend.pure-crochet.workers.dev';
 
 function callApi(action, params) {
 	var payload = Object.assign({ action: action }, params || {});
