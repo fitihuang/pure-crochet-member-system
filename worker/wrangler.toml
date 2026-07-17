@@ -1,0 +1,7 @@
+name = "pure-crochet-backend"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[triggers]
+# cron 是 UTC 時間，18:00 UTC = 台北時間隔天凌晨 2 點，對應原本 Apps Script 的每日排程時間
+crons = ["0 18 * * *"]

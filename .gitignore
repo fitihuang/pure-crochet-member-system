@@ -6,3 +6,9 @@ ImageUpload.gs
 *.json
 !appsscript.json
 !.clasp.json
+!worker/package.json
+
+# Worker 本機開發用的機密環境變數（服務帳號金鑰、API Key 都在裡面），只給 wrangler dev 用，正式環境用 wrangler secret 另外設定
+worker/.dev.vars
+worker/.wrangler/
+worker/node_modules/
