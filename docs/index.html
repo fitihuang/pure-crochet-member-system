@@ -353,13 +353,13 @@
 
 			var html = '';
 			html += renderProfileCard(profile);
-			html += renderPaymentInfoCard(settings);
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderCalendarCard(events);
 			html += '<div class="card" id="eventsCard"></div>';
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
+			html += renderPaymentInfoCard(settings);
 			showApp(html);
 			renderEventsCardForCurrentMonth();
 		}
