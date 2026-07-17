@@ -1,9 +1,5 @@
 import { getGradeIdByName } from './grades.js';
-
-function todayAtMidnight() {
-	const now = new Date();
-	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
+import { todayAtMidnight } from './dateUtils.js';
 
 export async function getEventList(sheets) {
 	const today = todayAtMidnight();

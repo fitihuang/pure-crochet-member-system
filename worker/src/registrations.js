@@ -1,11 +1,7 @@
 import { findMemberByLineUserId, findMemberById } from './members.js';
 import { findEventById, getEventPriceForGrade } from './events.js';
 import { getGradeById, getGradeIdByName } from './grades.js';
-
-function todayAtMidnight() {
-	const now = new Date();
-	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
+import { todayAtMidnight } from './dateUtils.js';
 
 // 寫進 Sheet 的「現在時間」用台北當地時間的文字格式，讓 Sheets 的 USER_ENTERED 能可靠辨識成日期時間值
 function nowAsTaipeiDateTimeString() {
