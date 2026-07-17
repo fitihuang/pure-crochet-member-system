@@ -348,16 +348,20 @@
 			document.getElementById('logoutBtn').style.display = 'inline-block';
 			var registeredEventIds = (profile.registrations || []).map(function (r) { return r['活動ID']; });
 
+			memberGrade = profile.grade;
+			myRegisteredEventIds = registeredEventIds;
+
 			var html = '';
 			html += renderProfileCard(profile);
 			html += renderPaymentInfoCard(settings);
-			html += renderCalendarCard(events);
 			html += renderRegistrationsCard(profile.registrations);
-			html += renderEventsCard(events, registeredEventIds, profile.grade);
+			html += renderCalendarCard(events);
+			html += '<div class="card" id="eventsCard"></div>';
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
 			showApp(html);
+			renderEventsCardForCurrentMonth();
 		}
 
 		function renderPaymentInfoCard(settings) {
@@ -442,9 +446,12 @@
 			document.getElementById('registrationsCard').innerHTML = buildRegistrationsHtml();
 		}
 
-		// 簡單版行事曆：用已經抓回來的活動列表在前端算格子，換月不用重打 API
+		// 簡單版行事曆：用已經抓回來的活動列表在前端算格子，換月不用重打 API。
+		// 「開放報名活動」清單也是看這個月份，換月時兩塊一起更新
 		var calendarEvents = [];
 		var calendarYear, calendarMonth;
+		var memberGrade = null;
+		var myRegisteredEventIds = [];
 
 		function renderCalendarCard(events) {
 			calendarEvents = events || [];
@@ -499,6 +506,7 @@
 			if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
 			if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
 			document.getElementById('calendarCard').innerHTML = buildCalendarHtml();
+			renderEventsCardForCurrentMonth();
 		}
 
 		function showCalendarDayEvents(day) {
@@ -512,12 +520,27 @@
 			document.getElementById('calendarDayEvents').innerHTML = items;
 		}
 
-		function renderEventsCard(events, registeredEventIds, grade) {
-			if (!events || events.length === 0) {
-				return '<div class="card"><h2>開放報名活動</h2><p>目前沒有開放報名的活動</p></div>';
+		// 只顯示月曆目前瀏覽的那個月份的活動，並依活動日期由舊到新排序
+		function renderEventsCardForCurrentMonth() {
+			var container = document.getElementById('eventsCard');
+			if (!container) return;
+
+			var monthEvents = calendarEvents.filter(function (event) {
+				var d = new Date(event['活動日期']);
+				return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth;
+			}).sort(function (a, b) {
+				return new Date(a['活動日期']) - new Date(b['活動日期']);
+			});
+
+			var title = '<h2>' + calendarYear + '年' + (calendarMonth + 1) + '月開放報名活動</h2>';
+			if (monthEvents.length === 0) {
+				container.innerHTML = title + '<p>這個月沒有開放報名的活動</p>';
+				return;
 			}
-			var items = events.map(function (event) { return renderEventCard(event, registeredEventIds, grade); }).join('');
-			return '<div class="card"><h2>開放報名活動</h2>' + items + '</div>';
+			var items = monthEvents.map(function (event) {
+				return renderEventCard(event, myRegisteredEventIds, memberGrade);
+			}).join('');
+			container.innerHTML = title + items;
 		}
 
 		function renderEventCard(event, registeredEventIds, grade) {
