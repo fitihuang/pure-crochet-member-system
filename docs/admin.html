@@ -515,6 +515,11 @@
 		}
 
 		function saveEvent(eventId) {
+			// 報名截止日沒填的話，系統判斷「是否已過截止」會直接失效，等於這個活動永遠不會截止報名
+			if (!document.getElementById('eventDeadlineInput').value) {
+				alert('請填寫報名截止日，沒填的話這個活動會永遠開放報名');
+				return;
+			}
 			var eventData = {
 				'活動名稱': document.getElementById('eventNameInput').value,
 				'活動日期': document.getElementById('eventDateInput').value,

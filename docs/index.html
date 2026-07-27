@@ -610,7 +610,7 @@
 				'<div class="eventHeader"><span class="eventName">' + event['活動名稱'] + '</span>' + feeHtml + '</div>' +
 				'<div class="eventMeta">📅 ' + formatDate(event['活動日期']) +
 				(formatTimeRange(event['開始時間'], event['結束時間']) ? '（' + formatTimeRange(event['開始時間'], event['結束時間']) + '）' : '') +
-				'　⏰ 報名截止 ' + formatDate(event['報名截止日']) + '</div>' +
+				(event['報名截止日'] ? '　⏰ 報名截止 ' + formatDate(event['報名截止日']) : '') + '</div>' +
 				locationHtml +
 				descriptionHtml +
 				'</div>' +
