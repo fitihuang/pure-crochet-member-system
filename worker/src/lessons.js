@@ -9,10 +9,17 @@ function toInt(value, fallback) {
 	return isNaN(n) ? fallback : n;
 }
 
+// 「一對一可選時長分鐘」是逗號分隔的分鐘數清單（例如 "60,90,120"），讓學員可以依課程種類選不同時長，
+// 不同課程本來報價就分不同時數，固定單一時長沒辦法對應
+function parseDurationOptions(raw) {
+	const options = String(raw || '').split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n) && n > 0);
+	return options.length > 0 ? options : [60, 90, 120];
+}
+
 async function getLessonSettings(sheets) {
 	const settings = await getSettings(sheets);
 	return {
-		durationMinutes: toInt(settings['一對一課程時長分鐘'], 60),
+		durationOptions: parseDurationOptions(settings['一對一可選時長分鐘']),
 		bufferMinutes: toInt(settings['一對一緩衝時間分鐘'], 15),
 		openTime: settings['一對一預約開放時段起'] || '10:00',
 		closeTime: settings['一對一預約開放時段迄'] || '18:00',
@@ -20,6 +27,18 @@ async function getLessonSettings(sheets) {
 		lineContactUrl: settings['負責人LINE聊天連結'] || '',
 		priceInfo: settings['一對一課程報價'] || ''
 	};
+}
+
+// 沒指定時長就用第一個選項當預設；有指定但不在允許清單內就擋掉，避免任意帶一個奇怪的時長進來
+function pickDuration(settings, requestedMinutes) {
+	if (requestedMinutes === undefined || requestedMinutes === '' || requestedMinutes === null) {
+		return settings.durationOptions[0];
+	}
+	const duration = toInt(requestedMinutes, NaN);
+	if (settings.durationOptions.indexOf(duration) === -1) {
+		throw new Error('時長選項不正確');
+	}
+	return duration;
 }
 
 // dateStr 是 'YYYY-MM-DD'，timeStr 是 'HH:MM'，組成帶明確時區位移的 ISO 字串，Calendar API 可以直接吃
@@ -58,19 +77,20 @@ export async function getLessonBookingInfo(sheets, auth) {
 		canBookLesson: canMemberBookLesson(member, lessons),
 		lessonCount: lessons.filter((l) => l['狀態'] === '已確認').length,
 		lineContactUrl: settings.lineContactUrl,
-		durationMinutes: settings.durationMinutes,
+		durationOptions: settings.durationOptions,
 		priceInfo: settings.priceInfo,
 		myLessons: lessons.sort((a, b) => new Date(b['預約日期時間']) - new Date(a['預約日期時間']))
 	};
 }
 
-export async function getAvailableLessonSlots(sheets, env, dateStr) {
+export async function getAvailableLessonSlots(sheets, env, dateStr, durationMinutes) {
 	if (await hasActivityOnDate(sheets, dateStr)) {
 		return [];
 	}
 
 	const settings = await getLessonSettings(sheets);
-	const stepMinutes = settings.durationMinutes + settings.bufferMinutes;
+	const duration = pickDuration(settings, durationMinutes);
+	const stepMinutes = duration + settings.bufferMinutes;
 
 	const dayStart = new Date(buildTaipeiISOString(dateStr, settings.openTime));
 	const dayEnd = new Date(buildTaipeiISOString(dateStr, settings.closeTime));
@@ -81,7 +101,7 @@ export async function getAvailableLessonSlots(sheets, env, dateStr) {
 	const slots = [];
 	let cursor = dayStart;
 	while (true) {
-		const slotEnd = new Date(cursor.getTime() + settings.durationMinutes * 60000);
+		const slotEnd = new Date(cursor.getTime() + duration * 60000);
 		if (slotEnd > dayEnd) break;
 		const overlapsBusy = busyIntervals.some((b) => cursor < b.end && slotEnd > b.start);
 		if (!overlapsBusy && cursor > now) {
@@ -92,7 +112,7 @@ export async function getAvailableLessonSlots(sheets, env, dateStr) {
 	return slots;
 }
 
-export async function bookLesson(sheets, env, auth, { date, startTime, note }) {
+export async function bookLesson(sheets, env, auth, { date, startTime, durationMinutes, note }) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
 	if (!member) throw new Error('找不到會員資料，請先完成帳號綁定');
 
@@ -101,30 +121,31 @@ export async function bookLesson(sheets, env, auth, { date, startTime, note }) {
 		throw new Error('請先私訊負責人完成第一次預約，之後才能自助預約');
 	}
 
-	return createLessonInternal(sheets, env, member, date, startTime, note);
+	return createLessonInternal(sheets, env, member, date, startTime, durationMinutes, note);
 }
 
-export async function createLessonForMember(sheets, env, auth, { memberId, date, startTime, note }) {
+export async function createLessonForMember(sheets, env, auth, { memberId, date, startTime, durationMinutes, note }) {
 	if (!auth.isAdmin) throw new Error('沒有權限');
 
 	const member = await findMemberById(sheets, memberId);
 	if (!member) throw new Error('找不到會員資料');
 
-	return createLessonInternal(sheets, env, member, date, startTime, note);
+	return createLessonInternal(sheets, env, member, date, startTime, durationMinutes, note);
 }
 
-async function createLessonInternal(sheets, env, member, date, startTime, note) {
+async function createLessonInternal(sheets, env, member, date, startTime, durationMinutes, note) {
 	if (await hasActivityOnDate(sheets, date)) {
 		throw new Error('這天已經有團體活動，無法預約一對一');
 	}
 
 	const settings = await getLessonSettings(sheets);
+	const duration = pickDuration(settings, durationMinutes);
 	const startISO = buildTaipeiISOString(date, startTime);
 	const startDate = new Date(startISO);
 	if (isNaN(startDate.getTime())) throw new Error('時間格式不正確');
 	if (startDate <= new Date()) throw new Error('不能預約已經過去的時間');
 
-	const endDate = new Date(startDate.getTime() + settings.durationMinutes * 60000);
+	const endDate = new Date(startDate.getTime() + duration * 60000);
 	const endISO = endDate.toISOString();
 
 	// 下單前重新查一次忙碌區間，避免兩個人在極短時間內搶同一個時段
@@ -186,10 +207,11 @@ export async function updateLessonTime(sheets, env, auth, { lessonId, date, star
 	const lesson = lessons.find((l) => l['預約ID'] === lessonId);
 	if (!lesson) throw new Error('找不到預約紀錄');
 
-	const settings = await getLessonSettings(sheets);
+	// 改期不改時長：沿用這筆預約原本的時長（結束時間跟開始時間的差），不受目前設定的可選時長清單影響
+	const originalDurationMs = new Date(lesson['結束時間']).getTime() - new Date(lesson['預約日期時間']).getTime();
 	const startDate = new Date(buildTaipeiISOString(date, startTime));
 	if (isNaN(startDate.getTime())) throw new Error('時間格式不正確');
-	const endDate = new Date(startDate.getTime() + settings.durationMinutes * 60000);
+	const endDate = new Date(startDate.getTime() + originalDurationMs);
 
 	if (lesson['GoogleCalendar事件ID']) {
 		await updateCalendarEvent(env, lesson['GoogleCalendar事件ID'], {

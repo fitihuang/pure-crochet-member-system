@@ -133,15 +133,15 @@ async function handleApiRequest(env, params) {
 		case 'updateSettings':
 			return updateSettings(sheets, auth, params.settingsData);
 		case 'getAvailableLessonSlots':
-			return getAvailableLessonSlots(sheets, env, params.date);
+			return getAvailableLessonSlots(sheets, env, params.date, params.durationMinutes);
 		case 'bookLesson':
-			return bookLesson(sheets, env, auth, { date: params.date, startTime: params.startTime, note: params.note });
+			return bookLesson(sheets, env, auth, { date: params.date, startTime: params.startTime, durationMinutes: params.durationMinutes, note: params.note });
 		case 'cancelLesson':
 			return cancelLesson(sheets, env, auth, params.lessonId);
 		case 'getAllLessonsForAdmin':
 			return getAllLessonsForAdmin(sheets, auth);
 		case 'createLessonForMember':
-			return createLessonForMember(sheets, env, auth, { memberId: params.memberId, date: params.date, startTime: params.startTime, note: params.note });
+			return createLessonForMember(sheets, env, auth, { memberId: params.memberId, date: params.date, startTime: params.startTime, durationMinutes: params.durationMinutes, note: params.note });
 		case 'updateLessonTime':
 			return updateLessonTime(sheets, env, auth, { lessonId: params.lessonId, date: params.date, startTime: params.startTime });
 		default:

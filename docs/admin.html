@@ -587,7 +587,7 @@
 				'<div class="formBox">' +
 				'<h3>預約設定</h3>' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">課程時長（分鐘）</span><input id="lessonDurationInput" type="number" value="' + (lessonSettings['一對一課程時長分鐘'] || '60') + '"></div>' +
+				'<div><span class="fieldLabel">可選時長（分鐘，多個用逗號分隔）</span><input id="lessonDurationOptionsInput" value="' + (lessonSettings['一對一可選時長分鐘'] || '60,90,120') + '"></div>' +
 				'<div><span class="fieldLabel">緩衝時間（分鐘）</span><input id="lessonBufferInput" type="number" value="' + (lessonSettings['一對一緩衝時間分鐘'] || '15') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
@@ -606,7 +606,7 @@
 
 		function saveLessonSettings() {
 			var settingsData = {
-				'一對一課程時長分鐘': document.getElementById('lessonDurationInput').value,
+				'一對一可選時長分鐘': document.getElementById('lessonDurationOptionsInput').value,
 				'一對一緩衝時間分鐘': document.getElementById('lessonBufferInput').value,
 				'一對一預約開放時段起': document.getElementById('lessonOpenTimeInput').value,
 				'一對一預約開放時段迄': document.getElementById('lessonCloseTimeInput').value,
@@ -632,6 +632,12 @@
 			var memberOptions = memberList.map(function (m) {
 				return '<option value="' + m['會員ID'] + '">' + m['姓名'] + '</option>';
 			}).join('');
+			var durationOptions = (lessonSettings['一對一可選時長分鐘'] || '60,90,120').split(',').map(function (d) {
+				return d.trim();
+			}).filter(function (d) { return d; });
+			var durationOptionsHtml = durationOptions.map(function (d) {
+				return '<option value="' + d + '">' + d + ' 分鐘</option>';
+			}).join('');
 			return '' +
 				'<div class="formBox">' +
 				'<h3>手動建立一對一預約（用於解鎖學員首次自助預約）</h3>' +
@@ -641,6 +647,8 @@
 				'<div><span class="fieldLabel">日期</span><input id="lessonDateInput" type="date"></div>' +
 				'<div><span class="fieldLabel">時間</span><input id="lessonTimeInput" type="time"></div>' +
 				'</div>' +
+				'<span class="fieldLabel">時長</span>' +
+				'<select id="lessonDurationSelectInput">' + durationOptionsHtml + '</select>' +
 				'<span class="fieldLabel">留言（選填）</span>' +
 				'<textarea id="lessonNoteInput"></textarea>' +
 				'<button onclick="createLesson()">建立預約</button>' +
@@ -658,6 +666,7 @@
 			showLockOverlay('建立預約中...');
 			callApi('createLessonForMember', {
 				idToken: idToken, memberId: memberId, date: date, startTime: startTime,
+				durationMinutes: document.getElementById('lessonDurationSelectInput').value,
 				note: document.getElementById('lessonNoteInput').value
 			}).then(function () {
 				return callApi('getAllLessonsForAdmin', { idToken: idToken });
@@ -679,10 +688,11 @@
 					? '<span class="unpaidTag">已取消</span>'
 					: '<span class="paidTag">已確認</span>';
 				var canManage = l['狀態'] === '已確認';
+				var durationMinutes = Math.round((new Date(l['結束時間']) - new Date(l['預約日期時間'])) / 60000);
 				return '' +
 					'<div class="listRow" id="lessonRow_' + l['預約ID'] + '">' +
 					'<div class="listRowInfo">' + l['會員姓名'] + statusTag + '<br>' +
-					'<span style="color:#8c8378;font-size:12px;">' + formatDate(l['預約日期時間']) + ' ' + formatTime(l['預約日期時間']) +
+					'<span style="color:#8c8378;font-size:12px;">' + formatDate(l['預約日期時間']) + ' ' + formatTime(l['預約日期時間']) + '（' + durationMinutes + ' 分鐘）' +
 					(l['特殊留言'] ? '　留言：' + l['特殊留言'] : '') + '</span>' +
 					'</div>' +
 					(canManage ? '' +
