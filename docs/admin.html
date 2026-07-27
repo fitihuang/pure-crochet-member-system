@@ -86,6 +86,10 @@
 			font-size: 12px;
 			padding: 6px 12px;
 		}
+		.dangerButton {
+			background: #fdeeee;
+			color: #c0392b;
+		}
 		input, select, textarea {
 			width: 100%;
 			padding: 9px;
@@ -447,6 +451,26 @@
 			document.getElementById('eventSection').scrollIntoView({ behavior: 'smooth' });
 		}
 
+		// 已有報名紀錄的活動後端會擋掉刪除，這裡先跟使用者確認一次，避免手滑誤刪
+		function deleteEventHandler(eventId) {
+			if (!confirm('確定要刪除這個活動嗎？已有報名紀錄的活動無法刪除。')) return;
+
+			showLockOverlay('刪除中...');
+			callApi('deleteEvent', { idToken: idToken, eventId: eventId })
+				.then(function () {
+					return callApi('getAllEventsForAdmin', { idToken: idToken });
+				})
+				.then(function (events) {
+					eventList = events;
+					document.getElementById('eventListArea').innerHTML = renderEventList();
+					hideLockOverlay();
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
+				});
+		}
+
 		function uploadEventImage(fileInput) {
 			var file = fileInput.files[0];
 			if (!file) return;
@@ -456,9 +480,9 @@
 
 			var reader = new FileReader();
 			reader.onload = function () {
-				// FileReader 讀出來是 data:image/png;base64,xxxx，imgbb 只要逗號後面那段
-				var base64Image = reader.result.split(',')[1];
-				callApi('uploadImageToImgbb', { idToken: idToken, base64Image: base64Image })
+				// reader.result 是完整的 data:image/png;base64,xxxx，後端要靠這個字首判斷圖片格式
+				var base64Image = reader.result;
+				callApi('uploadImage', { idToken: idToken, base64Image: base64Image })
 					.then(function (result) {
 						document.getElementById('eventImageInput').value = result.url;
 						statusEl.textContent = '上傳成功';
@@ -513,6 +537,7 @@
 					'<div class="listRowActions">' +
 					'<button class="secondaryButton smallButton" onclick="editEvent(\'' + e['活動ID'] + '\')">編輯</button>' +
 					'<button class="smallButton" onclick="viewRegistrations(\'' + e['活動ID'] + '\')">報名名單</button>' +
+					'<button class="dangerButton smallButton" onclick="deleteEventHandler(\'' + e['活動ID'] + '\')">刪除</button>' +
 					'</div>' +
 					'</div>';
 			}).join('');

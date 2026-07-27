@@ -24,6 +24,7 @@ export function createSheetsClient(env) {
 	let accessTokenPromise = null;
 	const rowsCache = {};
 	const headersCache = {};
+	const sheetIdCache = {};
 
 	async function getAccessToken() {
 		if (!accessTokenPromise) {
@@ -141,6 +142,41 @@ export function createSheetsClient(env) {
 		clearCache();
 	}
 
+	// 刪除整列要用 sheetId（數字 gid），不是工作表名稱，Sheets API 沒有直接查詢的捷徑，只能拉一次 metadata 來對照
+	async function getSheetId(sheetName) {
+		if (sheetIdCache[sheetName] !== undefined) return sheetIdCache[sheetName];
+		const token = await getAccessToken();
+		const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + env.SPREADSHEET_ID + '?fields=sheets.properties';
+		const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+		const data = await res.json();
+		const found = (data.sheets || []).find((s) => s.properties.title === sheetName);
+		sheetIdCache[sheetName] = found ? found.properties.sheetId : null;
+		return sheetIdCache[sheetName];
+	}
+
+	async function deleteRow(sheetName, rowNumber) {
+		const sheetId = await getSheetId(sheetName);
+		if (sheetId === null) throw new Error('找不到工作表：' + sheetName);
+
+		const token = await getAccessToken();
+		const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + env.SPREADSHEET_ID + ':batchUpdate';
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				requests: [{
+					deleteDimension: {
+						range: { sheetId, dimension: 'ROWS', startIndex: rowNumber - 1, endIndex: rowNumber }
+					}
+				}]
+			})
+		});
+		if (!res.ok) {
+			throw new Error('刪除 ' + sheetName + ' 資料列失敗：' + (await res.text()));
+		}
+		clearCache();
+	}
+
 	async function generateNextId(sheetName, idColumnName, prefix, padLength) {
 		const rows = await getSheetAsObjects(sheetName);
 		let maxNumber = 0;
@@ -159,6 +195,7 @@ export function createSheetsClient(env) {
 		sheetExists,
 		appendRowFromObject,
 		updateRowFromObject,
+		deleteRow,
 		generateNextId,
 		clearCache
 	};

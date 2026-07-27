@@ -5,10 +5,10 @@ import {
 	getMemberProfile, bindLineUserId, getAllMembers, createMember, updateMember,
 	checkAllMembersUpgrade, runMemberUpgradeCheck
 } from './members.js';
-import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent } from './events.js';
+import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
 import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment } from './registrations.js';
 import { getSettings } from './settings.js';
-import { uploadImageToImgbb } from './imageUpload.js';
+import { uploadImageToR2 } from './imageUpload.js';
 
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
@@ -19,9 +19,9 @@ const CORS_HEADERS = {
 // 需要登入身份的 action，統一在分派前驗證一次，業務邏輯函式就不用各自重打一次 LINE API
 const AUTH_REQUIRED_ACTIONS = new Set([
 	'getMemberProfile', 'bindLineUserId', 'getAllMembers', 'createMember', 'updateMember',
-	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'submitRegistration',
+	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
 	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'checkAllMembersUpgrade',
-	'uploadImageToImgbb'
+	'uploadImage'
 ]);
 
 function jsonResponse(data) {
@@ -97,7 +97,9 @@ async function handleApiRequest(env, params) {
 		case 'createEvent':
 			return createEvent(sheets, auth, params.eventData);
 		case 'updateEvent':
-			return updateEvent(sheets, auth, params.eventId, params.eventData);
+			return updateEvent(sheets, env, auth, params.eventId, params.eventData);
+		case 'deleteEvent':
+			return deleteEvent(sheets, env, auth, params.eventId);
 		case 'submitRegistration':
 			return submitRegistration(sheets, auth, params.eventId);
 		case 'getEventRegistrationsForAdmin':
@@ -108,8 +110,8 @@ async function handleApiRequest(env, params) {
 			return checkAllMembersUpgrade(sheets, auth);
 		case 'getGradeList':
 			return getGradeList(sheets);
-		case 'uploadImageToImgbb':
-			return uploadImageToImgbb(env, auth, params.base64Image);
+		case 'uploadImage':
+			return uploadImageToR2(env, auth, params.base64Image);
 		case 'getSettings':
 			return getSettings(sheets);
 		default:
