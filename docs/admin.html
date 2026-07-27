@@ -226,6 +226,8 @@
 		var gradeList = [];
 		var memberList = [];
 		var eventList = [];
+		var lessonList = [];
+		var lessonSettings = {};
 
 		function showApp(html) {
 			document.getElementById('app').innerHTML = html;
@@ -280,11 +282,15 @@
 			Promise.all([
 				callApi('getGradeList'),
 				callApi('getAllMembers', { idToken: idToken }),
-				callApi('getAllEventsForAdmin', { idToken: idToken })
+				callApi('getAllEventsForAdmin', { idToken: idToken }),
+				callApi('getAllLessonsForAdmin', { idToken: idToken }),
+				callApi('getSettings')
 			]).then(function (results) {
 				gradeList = results[0];
 				memberList = results[1];
 				eventList = results[2];
+				lessonList = results[3];
+				lessonSettings = results[4];
 				renderAdminPage();
 			}).catch(function (err) { showError(err.message); });
 		}
@@ -301,6 +307,12 @@
 				'<h2>活動管理</h2>' +
 				'<div id="eventFormArea">' + renderEventForm(null) + '</div>' +
 				'<div id="eventListArea">' + renderEventList() + '</div>' +
+				'</div>' +
+				'<div class="card" id="lessonSection">' +
+				'<h2>一對一預約管理</h2>' +
+				'<div id="lessonSettingsArea">' + renderLessonSettingsForm() + '</div>' +
+				'<div id="lessonFormArea">' + renderLessonForm() + '</div>' +
+				'<div id="lessonListArea">' + renderLessonList() + '</div>' +
 				'</div>' +
 				'<div class="card" id="registrationSection" style="display:none;"></div>'
 			);
@@ -541,6 +553,164 @@
 					'</div>' +
 					'</div>';
 			}).join('');
+		}
+
+		// ---------- 一對一預約管理 ----------
+
+		function renderLessonSettingsForm() {
+			return '' +
+				'<div class="formBox">' +
+				'<h3>預約設定</h3>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">課程時長（分鐘）</span><input id="lessonDurationInput" type="number" value="' + (lessonSettings['一對一課程時長分鐘'] || '60') + '"></div>' +
+				'<div><span class="fieldLabel">緩衝時間（分鐘）</span><input id="lessonBufferInput" type="number" value="' + (lessonSettings['一對一緩衝時間分鐘'] || '15') + '"></div>' +
+				'</div>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">開放時段起</span><input id="lessonOpenTimeInput" type="time" value="' + (lessonSettings['一對一預約開放時段起'] || '10:00') + '"></div>' +
+				'<div><span class="fieldLabel">開放時段迄</span><input id="lessonCloseTimeInput" type="time" value="' + (lessonSettings['一對一預約開放時段迄'] || '18:00') + '"></div>' +
+				'</div>' +
+				'<span class="fieldLabel">課前提醒分鐘數</span>' +
+				'<input id="lessonReminderInput" type="number" value="' + (lessonSettings['一對一課前提醒分鐘數'] || '60') + '">' +
+				'<span class="fieldLabel">負責人 LINE 聊天連結（給學員第一次私訊用）</span>' +
+				'<input id="lessonLineUrlInput" value="' + (lessonSettings['負責人LINE聊天連結'] || '') + '">' +
+				'<button onclick="saveLessonSettings()">儲存設定</button>' +
+				'</div>';
+		}
+
+		function saveLessonSettings() {
+			var settingsData = {
+				'一對一課程時長分鐘': document.getElementById('lessonDurationInput').value,
+				'一對一緩衝時間分鐘': document.getElementById('lessonBufferInput').value,
+				'一對一預約開放時段起': document.getElementById('lessonOpenTimeInput').value,
+				'一對一預約開放時段迄': document.getElementById('lessonCloseTimeInput').value,
+				'一對一課前提醒分鐘數': document.getElementById('lessonReminderInput').value,
+				'負責人LINE聊天連結': document.getElementById('lessonLineUrlInput').value
+			};
+			showLockOverlay('儲存設定中...');
+			callApi('updateSettings', { idToken: idToken, settingsData: settingsData })
+				.then(function () {
+					lessonSettings = Object.assign({}, lessonSettings, settingsData);
+					hideLockOverlay();
+					alert('設定已儲存');
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
+				});
+		}
+
+		// 手動幫學員建立第一筆一對一預約，之後系統偵測到該學員已有紀錄就會自動解鎖自助預約
+		function renderLessonForm() {
+			var memberOptions = memberList.map(function (m) {
+				return '<option value="' + m['會員ID'] + '">' + m['姓名'] + '</option>';
+			}).join('');
+			return '' +
+				'<div class="formBox">' +
+				'<h3>手動建立一對一預約（用於解鎖學員首次自助預約）</h3>' +
+				'<span class="fieldLabel">學員</span>' +
+				'<select id="lessonMemberInput">' + memberOptions + '</select>' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">日期</span><input id="lessonDateInput" type="date"></div>' +
+				'<div><span class="fieldLabel">時間</span><input id="lessonTimeInput" type="time"></div>' +
+				'</div>' +
+				'<span class="fieldLabel">留言（選填）</span>' +
+				'<textarea id="lessonNoteInput"></textarea>' +
+				'<button onclick="createLesson()">建立預約</button>' +
+				'</div>';
+		}
+
+		function createLesson() {
+			var memberId = document.getElementById('lessonMemberInput').value;
+			var date = document.getElementById('lessonDateInput').value;
+			var startTime = document.getElementById('lessonTimeInput').value;
+			if (!memberId || !date || !startTime) {
+				alert('請選擇學員、日期跟時間');
+				return;
+			}
+			showLockOverlay('建立預約中...');
+			callApi('createLessonForMember', {
+				idToken: idToken, memberId: memberId, date: date, startTime: startTime,
+				note: document.getElementById('lessonNoteInput').value
+			}).then(function () {
+				return callApi('getAllLessonsForAdmin', { idToken: idToken });
+			}).then(function (lessons) {
+				lessonList = lessons;
+				document.getElementById('lessonFormArea').innerHTML = renderLessonForm();
+				document.getElementById('lessonListArea').innerHTML = renderLessonList();
+				hideLockOverlay();
+			}).catch(function (err) {
+				hideLockOverlay();
+				alert(err.message);
+			});
+		}
+
+		function renderLessonList() {
+			if (lessonList.length === 0) return '<p>目前沒有一對一預約</p>';
+			return lessonList.map(function (l) {
+				var statusTag = l['狀態'] === '已取消'
+					? '<span class="unpaidTag">已取消</span>'
+					: '<span class="paidTag">已確認</span>';
+				var canManage = l['狀態'] === '已確認';
+				return '' +
+					'<div class="listRow" id="lessonRow_' + l['預約ID'] + '">' +
+					'<div class="listRowInfo">' + l['會員姓名'] + statusTag + '<br>' +
+					'<span style="color:#8c8378;font-size:12px;">' + formatDate(l['預約日期時間']) + ' ' + formatTime(l['預約日期時間']) +
+					(l['特殊留言'] ? '　留言：' + l['特殊留言'] : '') + '</span>' +
+					'</div>' +
+					(canManage ? '' +
+						'<div class="listRowActions">' +
+						'<button class="secondaryButton smallButton" onclick="editLessonTime(\'' + l['預約ID'] + '\')">修改時間</button>' +
+						'<button class="dangerButton smallButton" onclick="cancelLessonAdmin(\'' + l['預約ID'] + '\')">取消</button>' +
+						'</div>' : '') +
+					'</div>';
+			}).join('');
+		}
+
+		function editLessonTime(lessonId) {
+			var lesson = lessonList.filter(function (l) { return l['預約ID'] === lessonId; })[0];
+			var row = document.getElementById('lessonRow_' + lessonId);
+			row.innerHTML = '' +
+				'<div class="formBox" style="width:100%;">' +
+				'<div class="formRow">' +
+				'<div><span class="fieldLabel">日期</span><input id="lessonEditDateInput" type="date" value="' + toDateInputValue(lesson['預約日期時間']) + '"></div>' +
+				'<div><span class="fieldLabel">時間</span><input id="lessonEditTimeInput" type="time" value="' + formatTime(lesson['預約日期時間']) + '"></div>' +
+				'</div>' +
+				'<button onclick="saveLessonTime(\'' + lessonId + '\')">儲存</button> ' +
+				'<button class="secondaryButton" onclick="document.getElementById(\'lessonListArea\').innerHTML = renderLessonList()">取消</button>' +
+				'</div>';
+		}
+
+		function saveLessonTime(lessonId) {
+			var date = document.getElementById('lessonEditDateInput').value;
+			var startTime = document.getElementById('lessonEditTimeInput').value;
+			showLockOverlay('更新時間中...');
+			callApi('updateLessonTime', { idToken: idToken, lessonId: lessonId, date: date, startTime: startTime })
+				.then(function () {
+					return callApi('getAllLessonsForAdmin', { idToken: idToken });
+				}).then(function (lessons) {
+					lessonList = lessons;
+					document.getElementById('lessonListArea').innerHTML = renderLessonList();
+					hideLockOverlay();
+				}).catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
+				});
+		}
+
+		function cancelLessonAdmin(lessonId) {
+			if (!confirm('確定要取消這筆一對一預約嗎？')) return;
+			showLockOverlay('取消中...');
+			callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
+				.then(function () {
+					return callApi('getAllLessonsForAdmin', { idToken: idToken });
+				}).then(function (lessons) {
+					lessonList = lessons;
+					document.getElementById('lessonListArea').innerHTML = renderLessonList();
+					hideLockOverlay();
+				}).catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
+				});
 		}
 
 		// ---------- 活動報名名單 ----------

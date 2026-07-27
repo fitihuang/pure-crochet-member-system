@@ -2,7 +2,10 @@ import { getGoogleAccessToken } from './googleAuth.js';
 
 // 這幾欄是已知的日期欄位，讀出來的原始序號要轉成 ISO 字串；
 // 用「已知欄位名單」而不是猜數值範圍，避免跟金額/名額這類數字欄位搞混
-const DATE_FIELDS = new Set(['活動日期', '報名截止日', '加入日期', '報名時間', '消費日期', '發放日期', '到期日']);
+const DATE_FIELDS = new Set([
+	'活動日期', '報名截止日', '加入日期', '報名時間', '消費日期', '發放日期', '到期日',
+	'預約日期時間', '結束時間', '建立時間'
+]);
 
 // Google Sheets 的日期序號是從 1899-12-30 起算的天數，且是以試算表設定的時區（appsscript.json 設的 Asia/Taipei，UTC+8）
 // 為準的「當地時間」天數，不是 UTC，換算時要扣掉這個時差，不然會整整差 8 小時
@@ -74,7 +77,7 @@ export function createSheetsClient(env) {
 
 	// 這幾張表幾乎每個 action 都會用到，逐張表個別呼叫 Sheets API 很容易疊加到觸發用量限制（429）。
 	// 用 batchGet 一次請求全部抓回來，一個請求只打一次這個 API，其餘都吃這裡的快取
-	const CORE_SHEET_NAMES = ['Members', 'Grade', 'Events', 'Registrations', 'Purchases'];
+	const CORE_SHEET_NAMES = ['Members', 'Grade', 'Events', 'Registrations', 'Purchases', 'Lessons'];
 	let coreSheetsFetchPromise = null;
 
 	async function fetchCoreSheetsOnce() {

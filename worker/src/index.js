@@ -7,8 +7,12 @@ import {
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
 import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment } from './registrations.js';
-import { getSettings } from './settings.js';
+import { getSettings, updateSettings } from './settings.js';
 import { uploadImageToR2 } from './imageUpload.js';
+import {
+	getLessonBookingInfo, getAvailableLessonSlots, bookLesson, cancelLesson,
+	getAllLessonsForAdmin, createLessonForMember, updateLessonTime, sendUpcomingLessonReminders
+} from './lessons.js';
 
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
@@ -21,7 +25,8 @@ const AUTH_REQUIRED_ACTIONS = new Set([
 	'getMemberProfile', 'bindLineUserId', 'getAllMembers', 'createMember', 'updateMember',
 	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
 	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'checkAllMembersUpgrade',
-	'uploadImage'
+	'uploadImage', 'getAvailableLessonSlots', 'bookLesson', 'cancelLesson',
+	'getAllLessonsForAdmin', 'createLessonForMember', 'updateLessonTime', 'updateSettings'
 ]);
 
 function jsonResponse(data) {
@@ -60,10 +65,15 @@ export default {
 		}
 	},
 
-	// 對應原本 Apps Script 的 dailyMaintenance 每日排程，時間在 wrangler.toml 的 [triggers] 設定
+	// wrangler.toml 的 [triggers] 設定了兩組 cron，這裡依觸發的是哪一組分流：
+	// 每日一次的對應原本 Apps Script 的 dailyMaintenance；高頻率那組是一對一課前提醒檢查
 	async scheduled(event, env) {
 		const sheets = createSheetsClient(env);
-		await runMemberUpgradeCheck(sheets);
+		if (event.cron === '0 18 * * *') {
+			await runMemberUpgradeCheck(sheets);
+		} else {
+			await sendUpcomingLessonReminders(sheets, env);
+		}
 	}
 };
 
@@ -78,8 +88,14 @@ async function handleApiRequest(env, params) {
 	}
 
 	switch (action) {
-		case 'getMemberProfile':
-			return getMemberProfile(sheets, auth);
+		case 'getMemberProfile': {
+			const profile = await getMemberProfile(sheets, auth);
+			// 沒綁定會員資料時不用管一對一預約資訊，跟 needBinding 短路的既有邏輯一致
+			if (!profile.needBinding) {
+				Object.assign(profile, await getLessonBookingInfo(sheets, auth));
+			}
+			return profile;
+		}
 		case 'bindLineUserId':
 			return bindLineUserId(sheets, auth, params.phoneOrEmail);
 		case 'getAllMembers':
@@ -114,6 +130,20 @@ async function handleApiRequest(env, params) {
 			return uploadImageToR2(env, auth, params.base64Image);
 		case 'getSettings':
 			return getSettings(sheets);
+		case 'updateSettings':
+			return updateSettings(sheets, auth, params.settingsData);
+		case 'getAvailableLessonSlots':
+			return getAvailableLessonSlots(sheets, env, params.date);
+		case 'bookLesson':
+			return bookLesson(sheets, env, auth, { date: params.date, startTime: params.startTime, note: params.note });
+		case 'cancelLesson':
+			return cancelLesson(sheets, env, auth, params.lessonId);
+		case 'getAllLessonsForAdmin':
+			return getAllLessonsForAdmin(sheets, auth);
+		case 'createLessonForMember':
+			return createLessonForMember(sheets, env, auth, { memberId: params.memberId, date: params.date, startTime: params.startTime, note: params.note });
+		case 'updateLessonTime':
+			return updateLessonTime(sheets, env, auth, { lessonId: params.lessonId, date: params.date, startTime: params.startTime });
 		default:
 			return { error: '未知的 action: ' + action };
 	}

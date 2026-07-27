@@ -1,15 +1,10 @@
 import { findMemberByLineUserId, findMemberById } from './members.js';
 import { findEventById, getEventPriceForGrade } from './events.js';
 import { getGradeById, getGradeIdByName } from './grades.js';
-import { todayAtMidnight } from './dateUtils.js';
+import { todayAtMidnight, toSheetsDateTimeString } from './dateUtils.js';
 
-// 寫進 Sheet 的「現在時間」用台北當地時間的文字格式，讓 Sheets 的 USER_ENTERED 能可靠辨識成日期時間值
 function nowAsTaipeiDateTimeString() {
-	const taipeiMs = Date.now() + 8 * 3600000;
-	const d = new Date(taipeiMs);
-	const pad = (n) => String(n).padStart(2, '0');
-	return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) +
-		' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+	return toSheetsDateTimeString(new Date());
 }
 
 export async function submitRegistration(sheets, auth, eventId) {

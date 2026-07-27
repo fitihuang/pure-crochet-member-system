@@ -10,3 +10,19 @@ export async function getSettings(sheets) {
 	});
 	return settings;
 }
+
+// settingsData 是 { 設定項目: 內容 } 的物件，項目已存在就更新，不存在就新增一列
+export async function updateSettings(sheets, auth, settingsData) {
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	const rows = await sheets.getSheetAsObjects('Settings');
+	for (const [key, value] of Object.entries(settingsData)) {
+		const row = rows.find((r) => r['設定項目'] === key);
+		if (row) {
+			await sheets.updateRowFromObject('Settings', row._rowNumber, { 內容: value });
+		} else {
+			await sheets.appendRowFromObject('Settings', { 設定項目: key, 內容: value });
+		}
+	}
+	return { success: true };
+}

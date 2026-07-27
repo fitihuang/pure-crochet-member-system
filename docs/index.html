@@ -273,6 +273,12 @@
 			color: #c0392b;
 			margin-left: 6px;
 		}
+		.slotButton {
+			width: auto;
+			border-radius: 8px;
+			padding: 8px 12px;
+			font-size: 13px;
+		}
 	</style>
 </head>
 <body>
@@ -356,6 +362,7 @@
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderCalendarCard(events);
 			html += '<div class="card" id="eventsCard"></div>';
+			html += renderLessonCard(profile);
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
@@ -582,6 +589,117 @@
 				.catch(function (err) {
 					hideLockOverlay();
 					alert('報名失敗：' + err.message);
+				});
+		}
+
+		// ---------- 一對一教學預約 ----------
+
+		var lessonInfo = null;
+		var selectedLessonDate = null;
+		var selectedLessonTime = null;
+
+		function renderLessonCard(profile) {
+			lessonInfo = profile;
+			return '<div class="card" id="lessonCard">' + buildLessonCardHtml() + '</div>';
+		}
+
+		function buildLessonCardHtml() {
+			var html = '<h2>一對一教學預約</h2>';
+			if (!lessonInfo.canBookLesson) {
+				html += '<p>第一次預約請先私訊我們約時間，之後就可以直接在這裡自己選時段囉！</p>';
+				if (lessonInfo.lineContactUrl) {
+					html += '<a href="' + lessonInfo.lineContactUrl + '" target="_blank"><button>私訊預約第一次一對一</button></a>';
+				}
+			} else {
+				html += '' +
+					'<p>已上過 ' + lessonInfo.lessonCount + ' 次一對一課程（每次 ' + lessonInfo.durationMinutes + ' 分鐘）</p>' +
+					'<span class="fieldLabel" style="font-size:12px;color:#a89a8a;">選擇日期</span>' +
+					'<input id="lessonDateInput" type="date" min="' + toDateInputValue(new Date().toISOString()) + '" onchange="loadLessonSlots()">' +
+					'<div id="lessonSlotsArea"></div>';
+			}
+			html += buildMyLessonsHtml();
+			return html;
+		}
+
+		function loadLessonSlots() {
+			var date = document.getElementById('lessonDateInput').value;
+			if (!date) return;
+			selectedLessonDate = date;
+			selectedLessonTime = null;
+			var area = document.getElementById('lessonSlotsArea');
+			area.innerHTML = '查詢可預約時段中...';
+			callApi('getAvailableLessonSlots', { idToken: idToken, date: date }).then(function (slots) {
+				if (slots.length === 0) {
+					area.innerHTML = '<p>這天沒有可預約的時段</p>';
+					return;
+				}
+				area.innerHTML = '' +
+					'<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;">' +
+					slots.map(function (t) {
+						return '<button class="secondaryButton slotButton" onclick="selectLessonSlot(this, \'' + t + '\')">' + t + '</button>';
+					}).join('') +
+					// 一開始都是「secondaryButton」的未選中樣式，選了才會被 selectLessonSlot 移掉變成選中樣式
+					'</div>' +
+					'<textarea id="lessonNoteInput" placeholder="有想特別說明的可以留言（選填）" style="width:100%;min-height:60px;padding:10px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;"></textarea>' +
+					'<div id="lessonConfirmArea" style="margin-top:8px;"></div>';
+			}).catch(function (err) {
+				area.innerHTML = '<p class="errorText">' + err.message + '</p>';
+			});
+		}
+
+		// 點選時段時把其他按鈕都重設回未選中樣式，只留被點的那顆是選中樣式
+		function selectLessonSlot(btn, time) {
+			selectedLessonTime = time;
+			btn.parentElement.querySelectorAll('button').forEach(function (b) { b.classList.add('secondaryButton'); });
+			btn.classList.remove('secondaryButton');
+			document.getElementById('lessonConfirmArea').innerHTML =
+				'<button onclick="confirmBookLesson()">確認預約 ' + selectedLessonDate + ' ' + time + '</button>';
+		}
+
+		function confirmBookLesson() {
+			var note = document.getElementById('lessonNoteInput').value;
+			showLockOverlay('預約處理中，請稍候...');
+			callApi('bookLesson', { idToken: idToken, date: selectedLessonDate, startTime: selectedLessonTime, note: note })
+				.then(function () {
+					hideLockOverlay();
+					alert('預約成功！');
+					loadProfile();
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					alert('預約失敗：' + err.message);
+				});
+		}
+
+		function buildMyLessonsHtml() {
+			var lessons = lessonInfo.myLessons || [];
+			if (lessons.length === 0) return '';
+			var items = lessons.map(function (l) {
+				var canCancel = l['狀態'] === '已確認' && new Date(l['預約日期時間']) > new Date();
+				var statusTag = l['狀態'] === '已取消'
+					? '<span class="unpaidTag">已取消</span>'
+					: '<span class="paidTag">已確認</span>';
+				return '' +
+					'<div class="listItem">' +
+					formatDate(l['預約日期時間']) + ' ' + formatTime(l['預約日期時間']) + statusTag +
+					(l['特殊留言'] ? '<br>留言：' + l['特殊留言'] : '') +
+					(canCancel ? '<br><button class="secondaryButton smallButton" onclick="cancelMyLesson(\'' + l['預約ID'] + '\')">取消預約</button>' : '') +
+					'</div>';
+			}).join('');
+			return '<h2 style="margin-top:16px;">我的一對一紀錄</h2>' + items;
+		}
+
+		function cancelMyLesson(lessonId) {
+			if (!confirm('確定要取消這個預約嗎？')) return;
+			showLockOverlay('取消中...');
+			callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
+				.then(function () {
+					hideLockOverlay();
+					loadProfile();
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					alert(err.message);
 				});
 		}
 
