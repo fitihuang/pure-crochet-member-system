@@ -69,6 +69,13 @@
 			white-space: pre-wrap;
 			margin-bottom: 16px;
 		}
+		.eventLocation {
+			display: block;
+			font-size: 14px;
+			color: #6a93a5;
+			margin-bottom: 12px;
+			text-decoration: none;
+		}
 		button {
 			background: #a67c52;
 			color: #fff;
@@ -221,6 +228,12 @@
 			var descriptionHtml = event['活動說明']
 				? '<div class="eventDescription">' + event['活動說明'] + '</div>'
 				: '';
+			var locationHtml = '';
+			if (event['活動地點']) {
+				locationHtml = event['活動地點地圖網址']
+					? '<a class="eventLocation" href="' + event['活動地點地圖網址'] + '" target="_blank">📍 ' + event['活動地點'] + '</a>'
+					: '<div class="eventLocation">📍 ' + event['活動地點'] + '</div>';
+			}
 
 			showApp('' +
 				'<div class="card">' +
@@ -230,6 +243,7 @@
 				'<div class="eventMeta">📅 活動日期：' + formatDate(event['活動日期']) +
 				(formatTimeRange(event['開始時間'], event['結束時間']) ? '（' + formatTimeRange(event['開始時間'], event['結束時間']) + '）' : '') +
 				'<br>⏰ 報名截止：' + formatDate(event['報名截止日']) + '</div>' +
+				locationHtml +
 				descriptionHtml +
 				buttonHtml +
 				'</div>'
