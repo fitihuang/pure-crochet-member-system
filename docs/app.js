@@ -36,6 +36,12 @@ function formatDate(value) {
 	return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
 }
 
+// 活動的開始/結束時間欄位是純文字（'HH:MM'），不是日期值，兩者都有才顯示區間，只有一個就顯示那一個
+function formatTimeRange(startTime, endTime) {
+	if (startTime && endTime) return startTime + '-' + endTime;
+	return startTime || endTime || '';
+}
+
 function formatTime(value) {
 	if (!value) return '';
 	var date = new Date(value);

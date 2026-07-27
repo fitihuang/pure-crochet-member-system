@@ -142,9 +142,10 @@ export function createSheetsClient(env) {
 		coreSheetsFetchPromise = null;
 	}
 
-	// 手機號碼這類「開頭是0的數字字串」要強制當文字寫入，不然 Sheets 會自動轉數字吃掉開頭的0
+	// 手機號碼這類「開頭是0的數字字串」、還有「10:00」這種純時間文字，都要強制當文字寫入，
+	// 不然 Sheets 會自動把手機號碼轉數字吃掉開頭的0，或把時間文字轉成時間序號，讀回來就不是原本的字串了
 	function toWriteValue(value) {
-		if (typeof value === 'string' && /^0\d+$/.test(value)) {
+		if (typeof value === 'string' && (/^0\d+$/.test(value) || /^\d{1,2}:\d{2}$/.test(value))) {
 			return "'" + value; // USER_ENTERED 模式下，開頭加單引號會強制當文字
 		}
 		return value;

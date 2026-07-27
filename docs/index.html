@@ -520,7 +520,9 @@
 				return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth && d.getDate() === day;
 			});
 			var items = dayEvents.map(function (event) {
-				return '<div class="listItem"><a class="detailLink" href="event.html?eventId=' + event['活動ID'] + '">' + event['活動名稱'] + ' →</a></div>';
+				var timeRange = formatTimeRange(event['開始時間'], event['結束時間']);
+				return '<div class="listItem">' + event['活動名稱'] + (timeRange ? '　' + timeRange : '') + '<br>' +
+					'<a class="detailLink" href="event.html?eventId=' + event['活動ID'] + '">查看詳情 →</a></div>';
 			}).join('');
 			document.getElementById('calendarDayEvents').innerHTML = items;
 		}
@@ -572,7 +574,9 @@
 				'<div class="eventCard">' +
 				thumbHtml +
 				'<div class="eventHeader"><span class="eventName">' + event['活動名稱'] + '</span>' + feeHtml + '</div>' +
-				'<div class="eventMeta">📅 ' + formatDate(event['活動日期']) + '　⏰ 報名截止 ' + formatDate(event['報名截止日']) + '</div>' +
+				'<div class="eventMeta">📅 ' + formatDate(event['活動日期']) +
+				(formatTimeRange(event['開始時間'], event['結束時間']) ? '（' + formatTimeRange(event['開始時間'], event['結束時間']) + '）' : '') +
+				'　⏰ 報名截止 ' + formatDate(event['報名截止日']) + '</div>' +
 				buttonHtml +
 				'<br><a class="detailLink" href="event.html?eventId=' + event['活動ID'] + '">查看詳情 →</a>' +
 				'</div>';

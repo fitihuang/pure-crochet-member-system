@@ -227,7 +227,9 @@
 				thumbHtml +
 				'<div class="eventName">' + event['活動名稱'] + '</div>' +
 				'<div style="margin-bottom: 8px;">' + feeHtml + '</div>' +
-				'<div class="eventMeta">📅 活動日期：' + formatDate(event['活動日期']) + '<br>⏰ 報名截止：' + formatDate(event['報名截止日']) + '</div>' +
+				'<div class="eventMeta">📅 活動日期：' + formatDate(event['活動日期']) +
+				(formatTimeRange(event['開始時間'], event['結束時間']) ? '（' + formatTimeRange(event['開始時間'], event['結束時間']) + '）' : '') +
+				'<br>⏰ 報名截止：' + formatDate(event['報名截止日']) + '</div>' +
 				descriptionHtml +
 				buttonHtml +
 				'</div>'

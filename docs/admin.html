@@ -423,6 +423,10 @@
 				'<div><span class="fieldLabel">報名截止日</span><input id="eventDeadlineInput" type="date" value="' + (isEdit ? toDateInputValue(event['報名截止日']) : '') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
+				'<div><span class="fieldLabel">開始時間</span><input id="eventStartTimeInput" type="time" value="' + (isEdit ? (event['開始時間'] || '') : '') + '"></div>' +
+				'<div><span class="fieldLabel">結束時間</span><input id="eventEndTimeInput" type="time" value="' + (isEdit ? (event['結束時間'] || '') : '') + '"></div>' +
+				'</div>' +
+				'<div class="formRow">' +
 				'<div><span class="fieldLabel">總名額</span><input id="eventTotalQuotaInput" type="number" value="' + (isEdit ? event['總名額'] : '30') + '"></div>' +
 				'<div><span class="fieldLabel">VIP保留名額</span><input id="eventVipQuotaInput" type="number" value="' + (isEdit ? event['VIP保留名額'] : '10') + '"></div>' +
 				'<div><span class="fieldLabel">一般名額</span><input id="eventGeneralQuotaInput" type="number" value="' + (isEdit ? event['一般名額'] : '20') + '"></div>' +
@@ -511,6 +515,8 @@
 				'活動名稱': document.getElementById('eventNameInput').value,
 				'活動日期': document.getElementById('eventDateInput').value,
 				'報名截止日': document.getElementById('eventDeadlineInput').value,
+				'開始時間': document.getElementById('eventStartTimeInput').value,
+				'結束時間': document.getElementById('eventEndTimeInput').value,
 				'總名額': Number(document.getElementById('eventTotalQuotaInput').value),
 				'VIP保留名額': Number(document.getElementById('eventVipQuotaInput').value),
 				'一般名額': Number(document.getElementById('eventGeneralQuotaInput').value),
@@ -544,7 +550,9 @@
 				return '' +
 					'<div class="listRow">' +
 					'<div class="listRowInfo">' + e['活動名稱'] + '<span class="tagSmall">' + e['狀態'] + '</span><br>' +
-					'<span style="color:#8c8378;font-size:12px;">' + formatDate(e['活動日期']) + '　VIP剩餘' + e['VIP剩餘名額'] + '／一般剩餘' + e['一般剩餘名額'] + '</span>' +
+					'<span style="color:#8c8378;font-size:12px;">' + formatDate(e['活動日期']) +
+					(formatTimeRange(e['開始時間'], e['結束時間']) ? '　' + formatTimeRange(e['開始時間'], e['結束時間']) : '') +
+					'　VIP剩餘' + e['VIP剩餘名額'] + '／一般剩餘' + e['一般剩餘名額'] + '</span>' +
 					'</div>' +
 					'<div class="listRowActions">' +
 					'<button class="secondaryButton smallButton" onclick="editEvent(\'' + e['活動ID'] + '\')">編輯</button>' +
