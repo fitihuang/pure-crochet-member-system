@@ -609,6 +609,9 @@
 
 		function buildLessonCardHtml() {
 			var html = '<h2>一對一教學預約</h2>';
+			if (lessonInfo.priceInfo) {
+				html += '<p style="white-space:pre-wrap;font-size:13px;color:#8c8378;">' + lessonInfo.priceInfo + '</p>';
+			}
 			if (!lessonInfo.canBookLesson) {
 				html += '<p>第一次預約請先私訊我們約時間，之後就可以直接在這裡自己選時段囉！</p>';
 				if (lessonInfo.lineContactUrl) {

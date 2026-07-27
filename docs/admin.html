@@ -581,6 +581,8 @@
 				'<input id="lessonReminderInput" type="number" value="' + (lessonSettings['一對一課前提醒分鐘數'] || '60') + '">' +
 				'<span class="fieldLabel">負責人 LINE 聊天連結（給學員第一次私訊用）</span>' +
 				'<input id="lessonLineUrlInput" value="' + (lessonSettings['負責人LINE聊天連結'] || '') + '">' +
+				'<span class="fieldLabel">課程報價說明（顯示在會員頁一對一預約區塊）</span>' +
+				'<textarea id="lessonPriceInfoInput" style="min-height:120px;">' + (lessonSettings['一對一課程報價'] || '') + '</textarea>' +
 				'<button onclick="saveLessonSettings()">儲存設定</button>' +
 				'</div>';
 		}
@@ -592,7 +594,8 @@
 				'一對一預約開放時段起': document.getElementById('lessonOpenTimeInput').value,
 				'一對一預約開放時段迄': document.getElementById('lessonCloseTimeInput').value,
 				'一對一課前提醒分鐘數': document.getElementById('lessonReminderInput').value,
-				'負責人LINE聊天連結': document.getElementById('lessonLineUrlInput').value
+				'負責人LINE聊天連結': document.getElementById('lessonLineUrlInput').value,
+				'一對一課程報價': document.getElementById('lessonPriceInfoInput').value
 			};
 			showLockOverlay('儲存設定中...');
 			callApi('updateSettings', { idToken: idToken, settingsData: settingsData })

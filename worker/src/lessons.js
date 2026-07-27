@@ -17,7 +17,8 @@ async function getLessonSettings(sheets) {
 		openTime: settings['一對一預約開放時段起'] || '10:00',
 		closeTime: settings['一對一預約開放時段迄'] || '18:00',
 		reminderLeadMinutes: toInt(settings['一對一課前提醒分鐘數'], 60),
-		lineContactUrl: settings['負責人LINE聊天連結'] || ''
+		lineContactUrl: settings['負責人LINE聊天連結'] || '',
+		priceInfo: settings['一對一課程報價'] || ''
 	};
 }
 
@@ -52,6 +53,7 @@ export async function getLessonBookingInfo(sheets, auth) {
 		lessonCount: lessons.filter((l) => l['狀態'] === '已確認').length,
 		lineContactUrl: settings.lineContactUrl,
 		durationMinutes: settings.durationMinutes,
+		priceInfo: settings.priceInfo,
 		myLessons: lessons.sort((a, b) => new Date(b['預約日期時間']) - new Date(a['預約日期時間']))
 	};
 }
