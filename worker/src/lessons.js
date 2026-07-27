@@ -42,6 +42,12 @@ async function hasActivityOnDate(sheets, dateStr) {
 	return events.some((e) => e['活動日期'] && toTaipeiDateString(new Date(e['活動日期'])) === dateStr);
 }
 
+// 兩種方式都算解鎖自助預約：後台手動標註「一對一資格」（適用負責人本來就有的固定學員），
+// 或這個會員已經有至少一筆預約紀錄（後台幫忙建立過第一次之後自動解鎖）
+function canMemberBookLesson(member, lessons) {
+	return member['一對一資格'] === '是' || lessons.length > 0;
+}
+
 export async function getLessonBookingInfo(sheets, auth) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
 	if (!member) throw new Error('找不到會員資料，請先完成帳號綁定');
@@ -49,7 +55,7 @@ export async function getLessonBookingInfo(sheets, auth) {
 	const lessons = await getMemberLessons(sheets, member['會員ID']);
 	const settings = await getLessonSettings(sheets);
 	return {
-		canBookLesson: lessons.length > 0,
+		canBookLesson: canMemberBookLesson(member, lessons),
 		lessonCount: lessons.filter((l) => l['狀態'] === '已確認').length,
 		lineContactUrl: settings.lineContactUrl,
 		durationMinutes: settings.durationMinutes,
@@ -91,7 +97,7 @@ export async function bookLesson(sheets, env, auth, { date, startTime, note }) {
 	if (!member) throw new Error('找不到會員資料，請先完成帳號綁定');
 
 	const existingLessons = await getMemberLessons(sheets, member['會員ID']);
-	if (existingLessons.length === 0) {
+	if (!canMemberBookLesson(member, existingLessons)) {
 		throw new Error('請先私訊負責人完成第一次預約，之後才能自助預約');
 	}
 

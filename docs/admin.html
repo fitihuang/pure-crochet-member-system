@@ -355,6 +355,10 @@
 				'</div>' +
 				'<span class="fieldLabel">會員等級</span>' +
 				'<select id="memberGradeInput">' + gradeOptionsHtml(isEdit ? member['會員等級ID'] : (gradeList[0] ? gradeList[0]['會員等級ID'] : '')) + '</select>' +
+				'<label style="display:flex;align-items:center;gap:6px;margin-top:8px;">' +
+				'<input type="checkbox" id="memberLessonEligibleInput" style="width:auto;"' + (isEdit && member['一對一資格'] === '是' ? ' checked' : '') + '>' +
+				'可預約一對一教學（負責人本來就有聯繫過的固定學員可直接勾選，不用先建立一筆預約）' +
+				'</label>' +
 				'<button onclick="saveMember(' + (isEdit ? "'" + member['會員ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增會員') + '</button> ' +
 				(isEdit ? '<button class="secondaryButton" onclick="resetMemberForm()">取消編輯</button>' : '') +
 				'</div>';
@@ -375,7 +379,8 @@
 				'姓名': document.getElementById('memberNameInput').value,
 				'Email': document.getElementById('memberEmailInput').value,
 				'手機': document.getElementById('memberPhoneInput').value,
-				'會員等級ID': document.getElementById('memberGradeInput').value
+				'會員等級ID': document.getElementById('memberGradeInput').value,
+				'一對一資格': document.getElementById('memberLessonEligibleInput').checked ? '是' : '否'
 			};
 			showLockOverlay(memberId ? '更新會員中...' : '新增會員中...');
 			var request = memberId
@@ -401,7 +406,8 @@
 				var gradeName = grade ? grade['會員等級名稱'] : m['會員等級ID'];
 				return '' +
 					'<div class="listRow">' +
-					'<div class="listRowInfo">' + m['姓名'] + '<span class="tagSmall">' + gradeName + '</span><br>' +
+					'<div class="listRowInfo">' + m['姓名'] + '<span class="tagSmall">' + gradeName + '</span>' +
+					(m['一對一資格'] === '是' ? '<span class="tagSmall">可預約一對一</span>' : '') + '<br>' +
 					'<span style="color:#8c8378;font-size:12px;">' + (m['手機'] || m['Email'] || '') + '　付費次數：' + m['累積付費活動次數'] + '</span>' +
 					'</div>' +
 					'<div class="listRowActions"><button class="secondaryButton smallButton" onclick="editMember(\'' + m['會員ID'] + '\')">編輯</button></div>' +
