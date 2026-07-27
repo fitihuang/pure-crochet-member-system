@@ -53,23 +53,8 @@ export function createSheetsClient(env) {
 		return data.values || [];
 	}
 
-	async function getHeaders(sheetName) {
-		if (!headersCache[sheetName]) {
-			const values = await fetchRange(sheetName + '!1:1');
-			headersCache[sheetName] = (values && values[0]) || [];
-		}
-		return headersCache[sheetName];
-	}
-
-	async function getSheetAsObjects(sheetName) {
-		if (rowsCache[sheetName]) {
-			return rowsCache[sheetName];
-		}
-		const values = await fetchRange(sheetName);
-		if (!values || values.length === 0) {
-			rowsCache[sheetName] = [];
-			return [];
-		}
+	function parseValuesToRows(values) {
+		if (!values || values.length === 0) return [];
 		const headers = values[0];
 		const rows = [];
 		for (let i = 1; i < values.length; i++) {
@@ -84,8 +69,63 @@ export function createSheetsClient(env) {
 			row._rowNumber = i + 1;
 			rows.push(row);
 		}
-		rowsCache[sheetName] = rows;
 		return rows;
+	}
+
+	// 這幾張表幾乎每個 action 都會用到，逐張表個別呼叫 Sheets API 很容易疊加到觸發用量限制（429）。
+	// 用 batchGet 一次請求全部抓回來，一個請求只打一次這個 API，其餘都吃這裡的快取
+	const CORE_SHEET_NAMES = ['Members', 'Grade', 'Events', 'Registrations', 'Purchases'];
+	let coreSheetsFetchPromise = null;
+
+	async function fetchCoreSheetsOnce() {
+		if (!coreSheetsFetchPromise) {
+			coreSheetsFetchPromise = (async () => {
+				const token = await getAccessToken();
+				const rangesQuery = CORE_SHEET_NAMES.map((name) => 'ranges=' + encodeURIComponent(name)).join('&');
+				const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + env.SPREADSHEET_ID +
+					'/values:batchGet?valueRenderOption=UNFORMATTED_VALUE&' + rangesQuery;
+				const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+				if (!res.ok) {
+					throw new Error('Google Sheets API 暫時無法讀取（狀態碼 ' + res.status + '），請稍後再試一次');
+				}
+				const data = await res.json();
+				(data.valueRanges || []).forEach((valueRange, index) => {
+					const sheetName = CORE_SHEET_NAMES[index];
+					rowsCache[sheetName] = parseValuesToRows(valueRange.values);
+					headersCache[sheetName] = (valueRange.values && valueRange.values[0]) || [];
+				});
+			})();
+		}
+		return coreSheetsFetchPromise;
+	}
+
+	async function getHeaders(sheetName) {
+		if (!headersCache[sheetName]) {
+			if (CORE_SHEET_NAMES.indexOf(sheetName) !== -1) {
+				await fetchCoreSheetsOnce();
+			} else {
+				const values = await fetchRange(sheetName + '!1:1');
+				headersCache[sheetName] = (values && values[0]) || [];
+			}
+		}
+		return headersCache[sheetName];
+	}
+
+	async function getSheetAsObjects(sheetName) {
+		if (rowsCache[sheetName]) {
+			return rowsCache[sheetName];
+		}
+		if (CORE_SHEET_NAMES.indexOf(sheetName) !== -1) {
+			await fetchCoreSheetsOnce();
+			return rowsCache[sheetName] || [];
+		}
+		const values = await fetchRange(sheetName);
+		if (!values || values.length === 0) {
+			rowsCache[sheetName] = [];
+			return [];
+		}
+		rowsCache[sheetName] = parseValuesToRows(values);
+		return rowsCache[sheetName];
 	}
 
 	async function sheetExists(sheetName) {
@@ -95,6 +135,8 @@ export function createSheetsClient(env) {
 
 	function clearCache() {
 		Object.keys(rowsCache).forEach((key) => delete rowsCache[key]);
+		Object.keys(headersCache).forEach((key) => delete headersCache[key]);
+		coreSheetsFetchPromise = null;
 	}
 
 	// 手機號碼這類「開頭是0的數字字串」要強制當文字寫入，不然 Sheets 會自動轉數字吃掉開頭的0
