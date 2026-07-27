@@ -359,10 +359,10 @@
 
 			var html = '';
 			html += renderProfileCard(profile);
+			html += renderLessonCard(profile);
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderCalendarCard(events);
 			html += '<div class="card" id="eventsCard"></div>';
-			html += renderLessonCard(profile);
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
