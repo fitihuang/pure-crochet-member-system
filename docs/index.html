@@ -363,10 +363,10 @@
 			html += renderRegistrationsCard(profile.registrations);
 			html += renderCalendarCard(events);
 			html += '<div class="card" id="eventsCard"></div>';
+			html += renderPaymentInfoCard(settings);
 			if (profile.isAdmin) {
 				html += renderAdminCard();
 			}
-			html += renderPaymentInfoCard(settings);
 			showApp(html);
 			renderEventsCardForCurrentMonth();
 		}
