@@ -41,7 +41,13 @@ export function createSheetsClient(env) {
 			'/values/' + encodeURIComponent(range) + '?valueRenderOption=UNFORMATTED_VALUE';
 		const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
 		if (!res.ok) {
-			return null;
+			// 400 通常是分頁真的不存在（例如 Settings 分頁還沒建立），視為「沒有資料」；
+			// 其他狀態碼是暫時性 API 錯誤（500/503/429...），不能悄悄當成空資料，
+			// 不然像 findMemberByLineUserId 這類查詢會誤判成「找不到會員」
+			if (res.status === 400) {
+				return null;
+			}
+			throw new Error('Google Sheets API 暫時無法讀取（狀態碼 ' + res.status + '），請稍後再試一次');
 		}
 		const data = await res.json();
 		return data.values || [];
