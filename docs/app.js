@@ -40,7 +40,7 @@ function formatDate(value) {
 // 只有開始時間、沒有結束時間代表這場是彈性時間、自由離席的場次，額外加提示文字說明
 function formatTimeRange(startTime, endTime) {
 	if (startTime && endTime) return startTime + '-' + endTime;
-	if (startTime) return startTime + '（時間彈性，自由離席）';
+	if (startTime) return startTime + '，時間彈性，自由離席';
 	return endTime || '';
 }
 
