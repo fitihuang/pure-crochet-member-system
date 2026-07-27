@@ -36,10 +36,12 @@ function formatDate(value) {
 	return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
 }
 
-// 活動的開始/結束時間欄位是純文字（'HH:MM'），不是日期值，兩者都有才顯示區間，只有一個就顯示那一個
+// 活動的開始/結束時間欄位是純文字（'HH:MM'），不是日期值。
+// 只有開始時間、沒有結束時間代表這場是彈性時間、自由離席的場次，額外加提示文字說明
 function formatTimeRange(startTime, endTime) {
 	if (startTime && endTime) return startTime + '-' + endTime;
-	return startTime || endTime || '';
+	if (startTime) return startTime + '（時間彈性，自由離席）';
+	return endTime || '';
 }
 
 function formatTime(value) {
