@@ -24,26 +24,33 @@ export async function getBusyTimes(env, timeMinISO, timeMaxISO) {
 	return (calendar && calendar.busy) || [];
 }
 
-export async function createCalendarEvent(env, { summary, description, startISO, endISO }) {
+// 有明確時間就建時段事件，完全沒時間（startDate/endDate）就建全天事件，
+// endDate 是 Google Calendar 全天事件慣例的「不含」結束日，要傳隔天日期
+function buildTimeFields({ startISO, endISO, startDate, endDate }) {
+	if (startDate) {
+		return { start: { date: startDate }, end: { date: endDate } };
+	}
+	return {
+		start: { dateTime: startISO, timeZone: TIMEZONE },
+		end: { dateTime: endISO, timeZone: TIMEZONE }
+	};
+}
+
+export async function createCalendarEvent(env, { summary, description, startISO, endISO, startDate, endDate }) {
 	const event = await calendarFetch(env, 'calendars/' + encodeURIComponent(env.CALENDAR_ID) + '/events', {
 		method: 'POST',
-		body: JSON.stringify({
-			summary,
-			description,
-			start: { dateTime: startISO, timeZone: TIMEZONE },
-			end: { dateTime: endISO, timeZone: TIMEZONE }
-		})
+		body: JSON.stringify(Object.assign({ summary, description }, buildTimeFields({ startISO, endISO, startDate, endDate })))
 	});
 	return event.id;
 }
 
-export async function updateCalendarEvent(env, eventId, { startISO, endISO }) {
+export async function updateCalendarEvent(env, eventId, { summary, description, startISO, endISO, startDate, endDate }) {
+	const body = buildTimeFields({ startISO, endISO, startDate, endDate });
+	if (summary !== undefined) body.summary = summary;
+	if (description !== undefined) body.description = description;
 	await calendarFetch(env, 'calendars/' + encodeURIComponent(env.CALENDAR_ID) + '/events/' + encodeURIComponent(eventId), {
 		method: 'PATCH',
-		body: JSON.stringify({
-			start: { dateTime: startISO, timeZone: TIMEZONE },
-			end: { dateTime: endISO, timeZone: TIMEZONE }
-		})
+		body: JSON.stringify(body)
 	});
 }
 

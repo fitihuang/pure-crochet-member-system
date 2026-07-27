@@ -111,7 +111,7 @@ async function handleApiRequest(env, params) {
 		case 'getAllEventsForAdmin':
 			return getAllEventsForAdmin(sheets, auth);
 		case 'createEvent':
-			return createEvent(sheets, auth, params.eventData);
+			return createEvent(sheets, env, auth, params.eventData);
 		case 'updateEvent':
 			return updateEvent(sheets, env, auth, params.eventId, params.eventData);
 		case 'deleteEvent':
