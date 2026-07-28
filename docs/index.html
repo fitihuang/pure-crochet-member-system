@@ -778,10 +778,12 @@
 					: '<span class="paidTag">已確認</span>';
 				var durationMinutes = Math.round((new Date(l['結束時間']) - new Date(l['預約日期時間'])) / 60000);
 				return '' +
-					'<div class="listItem">' +
+					'<div class="listItem" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">' +
+					'<div>' +
 					formatDate(l['預約日期時間']) + ' ' + formatTime(l['預約日期時間']) + '（' + durationMinutes + ' 分鐘）' + statusTag +
 					(l['特殊留言'] ? '<br>留言：' + l['特殊留言'] : '') +
-					(canCancel ? '<br><button class="secondaryButton smallButton" onclick="cancelMyLesson(\'' + l['預約ID'] + '\')">取消預約</button>' : '') +
+					'</div>' +
+					(canCancel ? '<button class="secondaryButton smallButton" onclick="cancelMyLesson(\'' + l['預約ID'] + '\')">取消預約</button>' : '') +
 					'</div>';
 			}).join('');
 			return '<h2 style="margin-top:16px;">我的一對一紀錄</h2>' + items;
