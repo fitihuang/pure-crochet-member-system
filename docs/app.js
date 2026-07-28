@@ -20,9 +20,35 @@ function callApi(action, params) {
 				// 不自動重試，因為如果是「新增/修改」這類操作，重試有可能造成重複寫入，交給使用者自己判斷再手動重試
 				throw new Error('伺服器回應異常，請確認這個操作是否已經成功執行（避免重複送出），稍後再試一次');
 			}
-			if (result && result.error) throw new Error(result.error);
+			if (result && result.error) {
+				if (isAuthExpiredError(result.error)) {
+					handleAuthExpired();
+					// 已經處理成導回登入畫面了，回傳一個永遠不會 resolve 的 promise，讓呼叫端原本的 .then/.catch 都不用再跑
+					return new Promise(function () {});
+				}
+				throw new Error(result.error);
+			}
 			return result;
 		});
+}
+
+// 這兩種錯誤訊息是後端在「沒帶 idToken」或「LINE token 驗證失敗（含過期）」時丟出來的，
+// 代表登入狀態已經失效，要導回登入畫面，不是一般業務錯誤
+function isAuthExpiredError(message) {
+	return message === '需要登入' || message === 'LINE token 驗證失敗';
+}
+
+// LIFF 的 idToken 效期大約 1 小時，過期後沒辦法靜默換發新的，只能請使用者重新走一次登入
+function handleAuthExpired() {
+	hideLockOverlay();
+	liff.logout();
+	appAlert('登入已過期，請重新登入').then(function () {
+		if (typeof showLoginScreen === 'function') {
+			showLoginScreen();
+		} else {
+			location.reload();
+		}
+	});
 }
 
 // 只做初始化，不自動觸發登入導轉，讓使用者先看到頁面、自己按按鈕才登入
