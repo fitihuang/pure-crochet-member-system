@@ -494,8 +494,10 @@
 				'<div><span class="fieldLabel">活動地點</span><input id="eventLocationInput" value="' + (isEdit ? (event['活動地點'] || '') : '') + '"></div>' +
 				'<div><span class="fieldLabel">活動地點 Google Maps 網址</span><input id="eventLocationUrlInput" value="' + (isEdit ? (event['活動地點地圖網址'] || '') : '') + '"></div>' +
 				'</div>' +
-				'<span class="fieldLabel">活動說明</span>' +
-				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動說明'] || '') : '') + '</textarea>' +
+				'<span class="fieldLabel">活動大綱（顯示在會員頁活動列表）</span>' +
+				'<textarea id="eventOutlineInput">' + (isEdit ? (event['活動大綱'] || '') : '') + '</textarea>' +
+				'<span class="fieldLabel">活動內容（活動詳情頁會跟大綱一起顯示）</span>' +
+				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動內容'] || '') : '') + '</textarea>' +
 				'<span class="fieldLabel">活動封面圖片網址</span>' +
 				'<input id="eventImageInput" value="' + (isEdit ? (event['活動封面圖片網址'] || '') : '') + '">' +
 				'<input id="eventImageFileInput" type="file" accept="image/*" onchange="uploadEventImage(this)">' +
@@ -581,7 +583,8 @@
 				'一般會員費用': Number(document.getElementById('eventFeeGeneralInput').value),
 				'金牌會員費用': Number(document.getElementById('eventFeeGoldInput').value),
 				'狀態': document.getElementById('eventStatusInput').value,
-				'活動說明': document.getElementById('eventDescriptionInput').value,
+				'活動大綱': document.getElementById('eventOutlineInput').value,
+				'活動內容': document.getElementById('eventDescriptionInput').value,
 				'活動封面圖片網址': document.getElementById('eventImageInput').value
 			};
 			showLockOverlay(eventId ? '更新活動中...' : '新增活動中...');
