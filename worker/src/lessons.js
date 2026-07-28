@@ -83,33 +83,43 @@ export async function getLessonBookingInfo(sheets, auth) {
 	};
 }
 
-export async function getAvailableLessonSlots(sheets, env, dateStr, durationMinutes) {
+// 把可能重疊的緩衝區間合併，避免前端拿到一堆互相重疊的破碎範圍
+function mergeIntervals(intervals) {
+	const sorted = intervals.slice().sort((a, b) => a.start - b.start);
+	const merged = [];
+	sorted.forEach((cur) => {
+		const last = merged[merged.length - 1];
+		if (last && cur.start <= last.end) {
+			if (cur.end > last.end) last.end = cur.end;
+		} else {
+			merged.push({ start: cur.start, end: cur.end });
+		}
+	});
+	return merged;
+}
+
+// 學員可以自由輸入時間，這裡改成回傳「這天已經被卡住的時間範圍」（已含前後緩衝時間）給前端顯示跟即時檢查用，
+// 不再是固定間隔的按鈕清單，所以不需要 durationMinutes
+export async function getAvailableLessonSlots(sheets, env, dateStr) {
 	if (await hasActivityOnDate(sheets, dateStr)) {
-		return [];
+		return { dayBlocked: true, openTime: null, closeTime: null, blockedRanges: [] };
 	}
 
 	const settings = await getLessonSettings(sheets);
-	const duration = pickDuration(settings, durationMinutes);
-	const stepMinutes = duration + settings.bufferMinutes;
-
 	const dayStart = new Date(buildTaipeiISOString(dateStr, settings.openTime));
 	const dayEnd = new Date(buildTaipeiISOString(dateStr, settings.closeTime));
 	const busyTimes = await getBusyTimes(env, dayStart.toISOString(), dayEnd.toISOString());
-	const busyIntervals = busyTimes.map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
+	const bufferMs = settings.bufferMinutes * 60000;
 
-	const now = new Date();
-	const slots = [];
-	let cursor = dayStart;
-	while (true) {
-		const slotEnd = new Date(cursor.getTime() + duration * 60000);
-		if (slotEnd > dayEnd) break;
-		const overlapsBusy = busyIntervals.some((b) => cursor < b.end && slotEnd > b.start);
-		if (!overlapsBusy && cursor > now) {
-			slots.push(toTaipeiTimeString(cursor));
-		}
-		cursor = new Date(cursor.getTime() + stepMinutes * 60000);
-	}
-	return slots;
+	const blockedRanges = mergeIntervals(busyTimes.map((b) => ({
+		start: new Date(new Date(b.start).getTime() - bufferMs),
+		end: new Date(new Date(b.end).getTime() + bufferMs)
+	}))).map((r) => ({
+		start: toTaipeiTimeString(r.start < dayStart ? dayStart : r.start),
+		end: toTaipeiTimeString(r.end > dayEnd ? dayEnd : r.end)
+	}));
+
+	return { dayBlocked: false, openTime: settings.openTime, closeTime: settings.closeTime, blockedRanges };
 }
 
 export async function bookLesson(sheets, env, auth, { date, startTime, durationMinutes, note }) {
@@ -147,12 +157,17 @@ async function createLessonInternal(sheets, env, member, date, startTime, durati
 
 	const endDate = new Date(startDate.getTime() + duration * 60000);
 	const endISO = endDate.toISOString();
+	const bufferMs = settings.bufferMinutes * 60000;
 
-	// 下單前重新查一次忙碌區間，避免兩個人在極短時間內搶同一個時段
-	const busyTimes = await getBusyTimes(env, startISO, endISO);
-	const overlapsBusy = busyTimes.some((b) => startDate < new Date(b.end) && endDate > new Date(b.start));
+	// 下單前重新查一次忙碌區間（含前後緩衝時間），避免兩個人在極短時間內搶到緩衝範圍內的時段
+	const busyTimes = await getBusyTimes(env, new Date(startDate.getTime() - bufferMs).toISOString(), new Date(endDate.getTime() + bufferMs).toISOString());
+	const overlapsBusy = busyTimes.some((b) => {
+		const busyStart = new Date(new Date(b.start).getTime() - bufferMs);
+		const busyEnd = new Date(new Date(b.end).getTime() + bufferMs);
+		return startDate < busyEnd && endDate > busyStart;
+	});
 	if (overlapsBusy) {
-		throw new Error('這個時段剛好被預約走了，請重新選擇時段');
+		throw new Error('這個時段太接近其他預約（需保留前後緩衝時間），請重新選擇時段');
 	}
 
 	const calendarEventId = await createCalendarEvent(env, {

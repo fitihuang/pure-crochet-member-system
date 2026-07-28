@@ -298,12 +298,6 @@
 			color: #c0392b;
 			margin-left: 6px;
 		}
-		.slotButton {
-			width: auto;
-			border-radius: 8px;
-			padding: 8px 12px;
-			font-size: 13px;
-		}
 	</style>
 </head>
 <body>
@@ -640,6 +634,7 @@
 		// ---------- 一對一教學預約 ----------
 
 		var lessonInfo = null;
+		var lessonAvailability = null;
 		var selectedLessonDate = null;
 		var selectedLessonTime = null;
 		var selectedLessonDuration = null;
@@ -667,9 +662,11 @@
 					'<p>已上過 ' + lessonInfo.lessonCount + ' 次一對一課程</p>' +
 					'<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
 					'<div style="flex:1;min-width:120px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">選擇時長</span>' +
-					'<select id="lessonDurationInput" onchange="loadLessonSlots()">' + durationOptionsHtml + '</select></div>' +
+					'<select id="lessonDurationInput" onchange="onLessonTimeChange()">' + durationOptionsHtml + '</select></div>' +
 					'<div style="flex:1;min-width:120px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">選擇日期</span>' +
-					'<input id="lessonDateInput" type="date" min="' + toDateInputValue(new Date().toISOString()) + '" onchange="loadLessonSlots()"></div>' +
+					'<input id="lessonDateInput" type="date" min="' + toDateInputValue(new Date().toISOString()) + '" onchange="loadLessonAvailability()"></div>' +
+					'<div style="flex:1;min-width:120px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">選擇時間</span>' +
+					'<input id="lessonTimeInput" type="time" disabled onchange="onLessonTimeChange()"></div>' +
 					'</div>' +
 					'<div id="lessonSlotsArea"></div>';
 			}
@@ -677,41 +674,83 @@
 			return html;
 		}
 
-		function loadLessonSlots() {
+		function loadLessonAvailability() {
 			var date = document.getElementById('lessonDateInput').value;
-			var duration = document.getElementById('lessonDurationInput').value;
-			if (!date) return;
+			var timeInput = document.getElementById('lessonTimeInput');
 			selectedLessonDate = date;
-			selectedLessonDuration = duration;
 			selectedLessonTime = null;
+			lessonAvailability = null;
+			timeInput.value = '';
+			timeInput.disabled = true;
 			var area = document.getElementById('lessonSlotsArea');
+			if (!date) {
+				area.innerHTML = '';
+				return;
+			}
 			area.innerHTML = '查詢可預約時段中...';
-			callApi('getAvailableLessonSlots', { idToken: idToken, date: date, durationMinutes: duration }).then(function (slots) {
-				if (slots.length === 0) {
+			callApi('getAvailableLessonSlots', { idToken: idToken, date: date }).then(function (availability) {
+				lessonAvailability = availability;
+				if (availability.dayBlocked) {
 					area.innerHTML = '<p>這天沒有可預約的時段</p>';
 					return;
 				}
-				area.innerHTML = '' +
-					'<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;">' +
-					slots.map(function (t) {
-						return '<button class="secondaryButton slotButton" onclick="selectLessonSlot(this, \'' + t + '\')">' + t + '</button>';
-					}).join('') +
-					// 一開始都是「secondaryButton」的未選中樣式，選了才會被 selectLessonSlot 移掉變成選中樣式
-					'</div>' +
-					'<textarea id="lessonNoteInput" placeholder="有想特別說明的可以留言（選填）" style="width:100%;min-height:60px;padding:10px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;"></textarea>' +
+				timeInput.min = availability.openTime;
+				timeInput.max = availability.closeTime;
+				timeInput.disabled = false;
+				area.innerHTML = buildLessonAvailabilityInfoHtml(availability) +
+					'<textarea id="lessonNoteInput" placeholder="有想特別說明的可以留言（選填）" style="width:100%;min-height:60px;padding:10px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;margin-top:10px;"></textarea>' +
 					'<div id="lessonConfirmArea" style="margin-top:8px;"></div>';
 			}).catch(function (err) {
 				area.innerHTML = '<p class="errorText">' + err.message + '</p>';
 			});
 		}
 
-		// 點選時段時把其他按鈕都重設回未選中樣式，只留被點的那顆是選中樣式
-		function selectLessonSlot(btn, time) {
+		// 列出這天已經被卡住的時間範圍（已含前後緩衝時間），讓學員自己挑時間前可以先參考
+		function buildLessonAvailabilityInfoHtml(availability) {
+			if (availability.blockedRanges.length === 0) {
+				return '<p style="font-size:13px;color:#8c8378;">這天整段營業時間（' + availability.openTime + '–' + availability.closeTime + '）都可以預約</p>';
+			}
+			var items = availability.blockedRanges.map(function (r) {
+				return '<li>' + r.start + '–' + r.end + '</li>';
+			}).join('');
+			return '<div style="font-size:13px;color:#8c8378;">已被預約的時段（含前後緩衝時間）：<ul style="margin:4px 0 0 18px;padding:0;">' + items + '</ul></div>';
+		}
+
+		// 選時長／時間時即時檢查是否落在營業時段內、有沒有跟已卡住的緩衝區間重疊，通過才顯示確認按鈕
+		function onLessonTimeChange() {
+			var time = document.getElementById('lessonTimeInput').value;
+			var duration = document.getElementById('lessonDurationInput').value;
+			selectedLessonDuration = duration;
+			selectedLessonTime = null;
+			var confirmArea = document.getElementById('lessonConfirmArea');
+			if (!confirmArea) return;
+			if (!time || !lessonAvailability) {
+				confirmArea.innerHTML = '';
+				return;
+			}
+			var endTime = addMinutesToTimeString(time, parseInt(duration, 10));
+			if (time < lessonAvailability.openTime || endTime > lessonAvailability.closeTime) {
+				confirmArea.innerHTML = '<p class="errorText">這個時長超出營業時段（' + lessonAvailability.openTime + '–' + lessonAvailability.closeTime + '），請重新選擇</p>';
+				return;
+			}
+			var overlapsBlocked = lessonAvailability.blockedRanges.some(function (r) {
+				return time < r.end && endTime > r.start;
+			});
+			if (overlapsBlocked) {
+				confirmArea.innerHTML = '<p class="errorText">這個時段跟其他預約的緩衝時間太接近，請重新選擇</p>';
+				return;
+			}
 			selectedLessonTime = time;
-			btn.parentElement.querySelectorAll('button').forEach(function (b) { b.classList.add('secondaryButton'); });
-			btn.classList.remove('secondaryButton');
-			document.getElementById('lessonConfirmArea').innerHTML =
-				'<button onclick="confirmBookLesson()">確認預約 ' + selectedLessonDate + ' ' + time + '（' + selectedLessonDuration + ' 分鐘）</button>';
+			confirmArea.innerHTML = '<button onclick="confirmBookLesson()">確認預約 ' + selectedLessonDate + ' ' + time + '–' + endTime + '（' + duration + ' 分鐘）</button>';
+		}
+
+		// 'HH:MM' 字串加上指定分鐘數，回傳一樣格式的字串（純字串時間運算，跟日期時區換算無關）
+		function addMinutesToTimeString(timeStr, minutes) {
+			var parts = timeStr.split(':').map(Number);
+			var total = parts[0] * 60 + parts[1] + minutes;
+			var h = Math.floor(total / 60) % 24;
+			var m = total % 60;
+			return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
 		}
 
 		function confirmBookLesson() {

@@ -133,7 +133,7 @@ async function handleApiRequest(env, params) {
 		case 'updateSettings':
 			return updateSettings(sheets, auth, params.settingsData);
 		case 'getAvailableLessonSlots':
-			return getAvailableLessonSlots(sheets, env, params.date, params.durationMinutes);
+			return getAvailableLessonSlots(sheets, env, params.date);
 		case 'bookLesson':
 			return bookLesson(sheets, env, auth, { date: params.date, startTime: params.startTime, durationMinutes: params.durationMinutes, note: params.note });
 		case 'cancelLesson':
