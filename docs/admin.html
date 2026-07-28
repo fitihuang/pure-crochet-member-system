@@ -205,6 +205,44 @@
 			font-size: 14px;
 			color: #8a5a3c;
 		}
+		.appModalOverlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(58, 53, 48, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+			padding: 20px;
+		}
+		.appModalBox {
+			background: #fff;
+			border-radius: 16px;
+			padding: 20px;
+			max-width: 320px;
+			width: 100%;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+		}
+		.appModalTitle {
+			font-size: 14px;
+			font-weight: 700;
+			color: #8a5a3c;
+			margin-bottom: 10px;
+		}
+		.appModalMessage {
+			font-size: 14px;
+			color: #3a3530;
+			white-space: pre-wrap;
+			margin-bottom: 18px;
+		}
+		.appModalButtons {
+			display: flex;
+			justify-content: flex-end;
+			gap: 8px;
+		}
 	</style>
 </head>
 <body>
@@ -326,10 +364,10 @@
 				memberList = members;
 				document.getElementById('memberListArea').innerHTML = renderMemberList();
 				hideLockOverlay();
-				alert('付費次數已更新（會員等級請直接在下方編輯表單手動指定）');
+				appAlert('付費次數已更新（會員等級請直接在下方編輯表單手動指定）');
 			}).catch(function (err) {
 				hideLockOverlay();
-				alert(err.message);
+				appAlert(err.message);
 			});
 		}
 
@@ -395,7 +433,7 @@
 				document.getElementById('memberListArea').innerHTML = renderMemberList();
 			}).catch(function (err) {
 				hideLockOverlay();
-				alert(err.message);
+				appAlert(err.message);
 			});
 		}
 
@@ -479,22 +517,24 @@
 
 		// 已有報名紀錄的活動後端會擋掉刪除，這裡先跟使用者確認一次，避免手滑誤刪
 		function deleteEventHandler(eventId) {
-			if (!confirm('確定要刪除這個活動嗎？已有報名紀錄的活動無法刪除。')) return;
+			appConfirm('確定要刪除這個活動嗎？已有報名紀錄的活動無法刪除。').then(function (ok) {
+				if (!ok) return;
 
-			showLockOverlay('刪除中...');
-			callApi('deleteEvent', { idToken: idToken, eventId: eventId })
-				.then(function () {
-					return callApi('getAllEventsForAdmin', { idToken: idToken });
-				})
-				.then(function (events) {
-					eventList = events;
-					document.getElementById('eventListArea').innerHTML = renderEventList();
-					hideLockOverlay();
-				})
-				.catch(function (err) {
-					hideLockOverlay();
-					alert(err.message);
-				});
+				showLockOverlay('刪除中...');
+				callApi('deleteEvent', { idToken: idToken, eventId: eventId })
+					.then(function () {
+						return callApi('getAllEventsForAdmin', { idToken: idToken });
+					})
+					.then(function (events) {
+						eventList = events;
+						document.getElementById('eventListArea').innerHTML = renderEventList();
+						hideLockOverlay();
+					})
+					.catch(function (err) {
+						hideLockOverlay();
+						appAlert(err.message);
+					});
+			});
 		}
 
 		function uploadEventImage(fileInput) {
@@ -523,7 +563,7 @@
 		function saveEvent(eventId) {
 			// 報名截止日沒填的話，系統判斷「是否已過截止」會直接失效，等於這個活動永遠不會截止報名
 			if (!document.getElementById('eventDeadlineInput').value) {
-				alert('請填寫報名截止日，沒填的話這個活動會永遠開放報名');
+				appAlert('請填寫報名截止日，沒填的話這個活動會永遠開放報名');
 				return;
 			}
 			var eventData = {
@@ -557,7 +597,7 @@
 				document.getElementById('eventListArea').innerHTML = renderEventList();
 			}).catch(function (err) {
 				hideLockOverlay();
-				alert(err.message);
+				appAlert(err.message);
 			});
 		}
 
@@ -619,11 +659,11 @@
 				.then(function () {
 					lessonSettings = Object.assign({}, lessonSettings, settingsData);
 					hideLockOverlay();
-					alert('設定已儲存');
+					appAlert('設定已儲存');
 				})
 				.catch(function (err) {
 					hideLockOverlay();
-					alert(err.message);
+					appAlert(err.message);
 				});
 		}
 
@@ -660,7 +700,7 @@
 			var date = document.getElementById('lessonDateInput').value;
 			var startTime = document.getElementById('lessonTimeInput').value;
 			if (!memberId || !date || !startTime) {
-				alert('請選擇學員、日期跟時間');
+				appAlert('請選擇學員、日期跟時間');
 				return;
 			}
 			showLockOverlay('建立預約中...');
@@ -677,7 +717,7 @@
 				hideLockOverlay();
 			}).catch(function (err) {
 				hideLockOverlay();
-				alert(err.message);
+				appAlert(err.message);
 			});
 		}
 
@@ -731,24 +771,26 @@
 					hideLockOverlay();
 				}).catch(function (err) {
 					hideLockOverlay();
-					alert(err.message);
+					appAlert(err.message);
 				});
 		}
 
 		function cancelLessonAdmin(lessonId) {
-			if (!confirm('確定要取消這筆一對一預約嗎？')) return;
-			showLockOverlay('取消中...');
-			callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
-				.then(function () {
-					return callApi('getAllLessonsForAdmin', { idToken: idToken });
-				}).then(function (lessons) {
-					lessonList = lessons;
-					document.getElementById('lessonListArea').innerHTML = renderLessonList();
-					hideLockOverlay();
-				}).catch(function (err) {
-					hideLockOverlay();
-					alert(err.message);
-				});
+			appConfirm('確定要取消這筆一對一預約嗎？').then(function (ok) {
+				if (!ok) return;
+				showLockOverlay('取消中...');
+				callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
+					.then(function () {
+						return callApi('getAllLessonsForAdmin', { idToken: idToken });
+					}).then(function (lessons) {
+						lessonList = lessons;
+						document.getElementById('lessonListArea').innerHTML = renderLessonList();
+						hideLockOverlay();
+					}).catch(function (err) {
+						hideLockOverlay();
+						appAlert(err.message);
+					});
+			});
 		}
 
 		// ---------- 活動報名名單 ----------
@@ -802,7 +844,7 @@
 				})
 				.catch(function (err) {
 					hideLockOverlay();
-					alert(err.message);
+					appAlert(err.message);
 				});
 		}
 

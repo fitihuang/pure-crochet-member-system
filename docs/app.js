@@ -83,3 +83,39 @@ function hideLockOverlay() {
 	var el = document.getElementById('lockOverlay');
 	if (el) el.remove();
 }
+
+// 取代原生 alert/confirm：瀏覽器原生對話框最上面一定會顯示「網址 says」沒辦法客製化，
+// 所以自己刻一個彈窗才能顯示「Pure Crochet 會員系統 提醒」這種自訂標題
+function showAppModal(message, showCancel) {
+	return new Promise(function (resolve) {
+		var overlay = document.createElement('div');
+		overlay.className = 'appModalOverlay';
+		overlay.innerHTML = '' +
+			'<div class="appModalBox">' +
+			'<div class="appModalTitle">Pure Crochet 會員系統 提醒</div>' +
+			'<div class="appModalMessage"></div>' +
+			'<div class="appModalButtons">' +
+			(showCancel ? '<button class="appModalCancelBtn" style="background:#f2ede6;color:#8a5a3c;">取消</button>' : '') +
+			'<button class="appModalOkBtn">確定</button>' +
+			'</div>' +
+			'</div>';
+		overlay.querySelector('.appModalMessage').textContent = message;
+		document.body.appendChild(overlay);
+
+		function close(result) {
+			overlay.remove();
+			resolve(result);
+		}
+		var cancelBtn = overlay.querySelector('.appModalCancelBtn');
+		if (cancelBtn) cancelBtn.onclick = function () { close(false); };
+		overlay.querySelector('.appModalOkBtn').onclick = function () { close(true); };
+	});
+}
+
+function appAlert(message) {
+	return showAppModal(message, false);
+}
+
+function appConfirm(message) {
+	return showAppModal(message, true);
+}

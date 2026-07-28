@@ -230,6 +230,44 @@
 			font-size: 14px;
 			color: #8a5a3c;
 		}
+		.appModalOverlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(58, 53, 48, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+			padding: 20px;
+		}
+		.appModalBox {
+			background: #fff;
+			border-radius: 16px;
+			padding: 20px;
+			max-width: 320px;
+			width: 100%;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+		}
+		.appModalTitle {
+			font-size: 14px;
+			font-weight: 700;
+			color: #8a5a3c;
+			margin-bottom: 10px;
+		}
+		.appModalMessage {
+			font-size: 14px;
+			color: #3a3530;
+			white-space: pre-wrap;
+			margin-bottom: 18px;
+		}
+		.appModalButtons {
+			display: flex;
+			justify-content: flex-end;
+			gap: 8px;
+		}
 		.calendarGrid {
 			display: grid;
 			grid-template-columns: repeat(7, 1fr);
@@ -622,12 +660,12 @@
 			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
 				.then(function () {
 					hideLockOverlay();
-					alert('報名成功！');
+					appAlert('報名成功！');
 					loadProfile();
 				})
 				.catch(function (err) {
 					hideLockOverlay();
-					alert('報名失敗：' + err.message);
+					appAlert('報名失敗：' + err.message);
 				});
 		}
 
@@ -759,12 +797,12 @@
 			callApi('bookLesson', { idToken: idToken, date: selectedLessonDate, startTime: selectedLessonTime, durationMinutes: selectedLessonDuration, note: note })
 				.then(function () {
 					hideLockOverlay();
-					alert('預約成功！');
+					appAlert('預約成功！');
 					loadProfile();
 				})
 				.catch(function (err) {
 					hideLockOverlay();
-					alert('預約失敗：' + err.message);
+					appAlert('預約失敗：' + err.message);
 				});
 		}
 
@@ -790,17 +828,19 @@
 		}
 
 		function cancelMyLesson(lessonId) {
-			if (!confirm('確定要取消這個預約嗎？')) return;
-			showLockOverlay('取消中...');
-			callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
-				.then(function () {
-					hideLockOverlay();
-					loadProfile();
-				})
-				.catch(function (err) {
-					hideLockOverlay();
-					alert(err.message);
-				});
+			appConfirm('確定要取消這個預約嗎？').then(function (ok) {
+				if (!ok) return;
+				showLockOverlay('取消中...');
+				callApi('cancelLesson', { idToken: idToken, lessonId: lessonId })
+					.then(function () {
+						hideLockOverlay();
+						loadProfile();
+					})
+					.catch(function (err) {
+						hideLockOverlay();
+						appAlert(err.message);
+					});
+			});
 		}
 
 		function renderBindingForm() {
@@ -821,10 +861,10 @@
 					if (result.success) {
 						loadProfile();
 					} else {
-						alert(result.error);
+						appAlert(result.error);
 					}
 				})
-				.catch(function (err) { alert(err.message); });
+				.catch(function (err) { appAlert(err.message); });
 		}
 
 		function renderAdminCard() {
