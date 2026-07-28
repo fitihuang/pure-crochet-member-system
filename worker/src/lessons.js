@@ -75,7 +75,8 @@ export async function getLessonBookingInfo(sheets, auth) {
 	const settings = await getLessonSettings(sheets);
 	return {
 		canBookLesson: canMemberBookLesson(member, lessons),
-		lessonCount: lessons.filter((l) => l['狀態'] === '已確認').length,
+		// 只算已經上過的，還沒發生的預約不能算數
+		lessonCount: lessons.filter((l) => l['狀態'] === '已確認' && new Date(l['預約日期時間']) <= new Date()).length,
 		lineContactUrl: settings.lineContactUrl,
 		durationOptions: settings.durationOptions,
 		priceInfo: settings.priceInfo,
