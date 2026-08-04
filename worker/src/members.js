@@ -1,5 +1,6 @@
 import { getGradeById } from './grades.js';
 import { findEventById } from './events.js';
+import { pushMessageToAdmin } from './lineMessaging.js';
 
 export async function getMemberProfile(sheets, auth) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
@@ -7,6 +8,11 @@ export async function getMemberProfile(sheets, auth) {
 		// 管理員身分是看 ADMIN_LINE_USER_IDS，跟有沒有綁定會員資料無關，
 		// 沒綁定也要能拿到 isAdmin，不然管理員在還沒綁定會員時會被擋在後台外
 		return { needBinding: true, isAdmin: auth.isAdmin };
+	}
+
+	// 自助申請的新會員在負責人審核通過前，先卡在這個畫面，看不到完整會員資料
+	if (member['審核狀態'] === '待審核') {
+		return { pendingReview: true, isAdmin: auth.isAdmin };
 	}
 
 	const profile = {
@@ -48,6 +54,47 @@ export async function bindLineUserId(sheets, auth, phoneOrEmail) {
 	}
 
 	await sheets.updateRowFromObject('Members', matched._rowNumber, { 'LINE userId': auth.lineUserId });
+	return { success: true };
+}
+
+// 全新的人（連既有會員資料都沒有）自己填資料申請加入，先建一筆「待審核」的會員資料，
+// LINE userId 這時就先綁上去（本來就是這個人自己登入送出的），審核通過前只會看到審核中畫面
+export async function applyForMembership(sheets, env, auth, memberData) {
+	const existing = await findMemberByLineUserId(sheets, auth.lineUserId);
+	if (existing) throw new Error('你已經是會員了，或申請正在審核中，請勿重複申請');
+
+	if (!memberData['姓名'] || !(memberData['手機'] || memberData['Email'])) {
+		throw new Error('請填寫姓名，並至少填寫手機或 Email 其中一項');
+	}
+
+	const memberId = await sheets.generateNextId('Members', '會員ID', 'M', 4);
+	await sheets.appendRowFromObject('Members', {
+		會員ID: memberId,
+		'LINE userId': auth.lineUserId,
+		姓名: memberData['姓名'],
+		Email: memberData['Email'] || '',
+		手機: memberData['手機'] || '',
+		累積付費活動次數: 0,
+		加入日期: new Date().toISOString().slice(0, 10),
+		審核狀態: '待審核'
+	});
+
+	await pushMessageToAdmin(env, '🆕 新會員申請待審核\n姓名：' + memberData['姓名'] +
+		(memberData['手機'] ? '\n手機：' + memberData['手機'] : '') +
+		(memberData['Email'] ? '\nEmail：' + memberData['Email'] : ''));
+	return { success: true };
+}
+
+// 拒絕申請就直接刪掉這筆待審核資料，不留「已拒絕」狀態，之後這個人還是可以重新申請一次；
+// 限定只能刪「待審核」的資料，避免這個入口被誤用來刪掉正常會員（那會留下報名/預約等孤兒資料）
+export async function rejectMemberApplication(sheets, auth, memberId) {
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	const member = await findMemberById(sheets, memberId);
+	if (!member) throw new Error('找不到申請資料');
+	if (member['審核狀態'] !== '待審核') throw new Error('這筆不是待審核中的申請');
+
+	await sheets.deleteRow('Members', member._rowNumber);
 	return { success: true };
 }
 

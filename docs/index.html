@@ -408,6 +408,10 @@
 				renderBindingForm();
 				return;
 			}
+			if (profile.pendingReview) {
+				renderPendingReviewScreen();
+				return;
+			}
 
 			document.getElementById('logoutBtn').style.display = 'inline-block';
 			var registeredEventIds = (profile.registrations || []).map(function (r) { return r['活動ID']; });
@@ -857,6 +861,7 @@
 				'<p>請輸入你在會員資料留的手機或 Email：</p>' +
 				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
 				'<button onclick="submitBinding()">確認綁定</button>' +
+				'<p style="margin-top:16px;font-size:13px;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
 				'</div>'
 			);
 		}
@@ -872,6 +877,51 @@
 					}
 				})
 				.catch(function (err) { appAlert(err.message); });
+		}
+
+		function renderApplyForm() {
+			showApp('' +
+				'<div class="card">' +
+				'<h2>申請加入會員</h2>' +
+				'<p>填寫資料送出後，需要等負責人審核通過才能使用會員功能。</p>' +
+				'<span class="fieldLabel">姓名</span>' +
+				'<input id="applyNameInput" type="text">' +
+				'<span class="fieldLabel">手機</span>' +
+				'<input id="applyPhoneInput" type="text" placeholder="手機或 Email 至少填一項">' +
+				'<span class="fieldLabel">Email</span>' +
+				'<input id="applyEmailInput" type="text">' +
+				'<button onclick="submitApplication()">送出申請</button>' +
+				'<p style="margin-top:16px;font-size:13px;"><a href="#" onclick="renderBindingForm();return false;">← 我已經是會員了，返回綁定</a></p>' +
+				'</div>'
+			);
+		}
+
+		function submitApplication() {
+			var memberData = {
+				'姓名': document.getElementById('applyNameInput').value,
+				'手機': document.getElementById('applyPhoneInput').value,
+				'Email': document.getElementById('applyEmailInput').value
+			};
+			showLockOverlay('送出申請中...');
+			callApi('applyForMembership', { idToken: idToken, memberData: memberData })
+				.then(function () {
+					hideLockOverlay();
+					loadProfile();
+				})
+				.catch(function (err) {
+					hideLockOverlay();
+					appAlert(err.message);
+				});
+		}
+
+		function renderPendingReviewScreen() {
+			showApp('' +
+				'<div class="card" style="text-align:center;">' +
+				'<h2>申請審核中</h2>' +
+				'<p>你的會員申請已經送出，等負責人審核通過後就能使用會員功能，請耐心等候。</p>' +
+				'<button class="secondaryButton" onclick="logout()">登出</button>' +
+				'</div>'
+			);
 		}
 
 		function renderAdminCard() {
