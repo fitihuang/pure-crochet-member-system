@@ -300,7 +300,7 @@
 			showApp('' +
 				'<div class="card" style="text-align:center;">' +
 				'<h2>管理後台登入</h2>' +
-				'<button onclick="liff.login()">使用 LINE 登入</button>' +
+				'<button onclick="liff.login({redirectUri: location.href})">使用 LINE 登入</button>' +
 				'</div>'
 			);
 		}
