@@ -381,12 +381,18 @@
 			showError('LIFF 初始化失敗：' + err);
 		});
 
+		// 三個入口共用同一個畫面：不管是還沒登入的新訪客、還是登入後找不到對應會員資料（needBinding）都會看到這個畫面
 		function showLoginScreen() {
 			showApp('' +
-				'<div class="card" style="text-align:center;">' +
-				'<h2>歡迎使用 Pure Crochet 會員系統</h2>' +
-				'<p>登入後可查看你的會員等級與報名紀錄</p>' +
-				'<button onclick="liff.login()">使用 LINE 登入</button>' +
+				'<div class="card">' +
+				'<h2 style="text-align:center;">Pure Crochet 會員系統</h2>' +
+				'<h3 style="margin-top:14px;">已是會員，第一次使用會員系統</h3>' +
+				'<p style="font-size:13px;color:#8c8378;">請輸入你在會員資料留的手機或 Email：</p>' +
+				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
+				'<button onclick="submitBinding()">確認綁定</button>' +
+				'<div style="text-align:center;color:#c9bfae;font-size:12px;margin:16px 0;">— 或 —</div>' +
+				'<button class="secondaryButton" onclick="liff.login()">使用 LINE 登入</button>' +
+				'<p style="margin-top:16px;font-size:13px;text-align:center;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
 				'</div>'
 			);
 		}
@@ -405,7 +411,7 @@
 
 		function renderProfile(profile, events, settings) {
 			if (profile.needBinding) {
-				renderBindingForm();
+				showLoginScreen();
 				return;
 			}
 			if (profile.pendingReview) {
@@ -854,19 +860,10 @@
 			});
 		}
 
-		function renderBindingForm() {
-			showApp('' +
-				'<div class="card">' +
-				'<h2>第一次登入，請完成綁定</h2>' +
-				'<p>請輸入你在會員資料留的手機或 Email：</p>' +
-				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
-				'<button onclick="submitBinding()">確認綁定</button>' +
-				'<p style="margin-top:16px;font-size:13px;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
-				'</div>'
-			);
-		}
-
+		// 這三個入口（綁定／LINE登入／申請）都需要先有 idToken 才能真的送出，還沒登入就點的話先去登入，
+		// 順便走過一次 LINE 登入導轉，回來後一樣會落在這個畫面，重新輸入一次即可
 		function submitBinding() {
+			if (!idToken) { liff.login(); return; }
 			var value = document.getElementById('bindInput').value;
 			callApi('bindLineUserId', { idToken: idToken, phoneOrEmail: value })
 				.then(function (result) {
@@ -891,12 +888,13 @@
 				'<span class="fieldLabel">Email</span>' +
 				'<input id="applyEmailInput" type="text">' +
 				'<button onclick="submitApplication()">送出申請</button>' +
-				'<p style="margin-top:16px;font-size:13px;"><a href="#" onclick="renderBindingForm();return false;">← 我已經是會員了，返回綁定</a></p>' +
+				'<p style="margin-top:16px;font-size:13px;"><a href="#" onclick="showLoginScreen();return false;">← 我已經是會員了，返回綁定</a></p>' +
 				'</div>'
 			);
 		}
 
 		function submitApplication() {
+			if (!idToken) { liff.login(); return; }
 			var memberData = {
 				'姓名': document.getElementById('applyNameInput').value,
 				'手機': document.getElementById('applyPhoneInput').value,
