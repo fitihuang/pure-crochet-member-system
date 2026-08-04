@@ -269,6 +269,19 @@
 			justify-content: flex-end;
 			gap: 8px;
 		}
+		.loginSplitRight {
+			border-left: 1px solid #f0e8dd;
+			padding-left: 24px;
+		}
+		/* 窄螢幕時兩欄會疊成上下排，改用上方橫線分隔，不然左側直線斷在按鈕角落很突兀 */
+		@media (max-width: 480px) {
+			.loginSplitRight {
+				border-left: none;
+				border-top: 1px solid #f0e8dd;
+				padding-left: 0;
+				padding-top: 20px;
+			}
+		}
 		.calendarGrid {
 			display: grid;
 			grid-template-columns: repeat(7, 1fr);
@@ -386,13 +399,19 @@
 			showApp('' +
 				'<div class="card">' +
 				'<h2 style="text-align:center;">Pure Crochet 會員系統</h2>' +
-				'<h3 style="margin-top:14px;">已是會員，第一次使用會員系統</h3>' +
-				'<p style="font-size:13px;color:#8c8378;">請輸入你在會員資料留的手機或 Email：</p>' +
+				'<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;">' +
+				'<div style="flex:1;min-width:200px;">' +
+				'<span class="fieldLabel" style="font-size:12px;color:#a89a8a;">已是會員，第一次使用會員系統</span>' +
+				'<p style="font-size:13px;color:#8c8378;margin-top:4px;">請輸入你在會員資料留的手機或 Email：</p>' +
 				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
 				'<button onclick="submitBinding()">確認綁定</button>' +
-				'<div style="text-align:center;color:#c9bfae;font-size:12px;margin:16px 0;">— 或 —</div>' +
-				'<button class="secondaryButton" onclick="liff.login()">使用 LINE 登入</button>' +
-				'<p style="margin-top:16px;font-size:13px;text-align:center;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
+				'</div>' +
+				'<div class="loginSplitRight" style="flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;">' +
+				'<button class="secondaryButton" onclick="liff.login()" style="width:100%;">使用 LINE 登入</button>' +
+				'</div>' +
+				'</div>' +
+				'<hr style="border:none;border-top:1px solid #f0e8dd;margin:20px 0;">' +
+				'<p style="font-size:13px;text-align:center;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
 				'</div>'
 			);
 		}
