@@ -29,7 +29,10 @@ export async function runSubmitRegistration(sheets, memberId, eventId, customFie
 
 	const gradeId = member['會員等級ID'];
 	await assertQuotaAvailable(sheets, event, gradeId);
-	const price = await getEventPriceForGrade(sheets, event, gradeId);
+	// 應繳金額 = 活動基本費用 + 自訂欄位裡有設定加價的選項；一律用活動當下的欄位設定重算，不相信前端傳來的金額，避免被竄改
+	const basePrice = await getEventPriceForGrade(sheets, event, gradeId);
+	const addonPrice = calculateCustomFieldsAddonPrice(event, customFieldAnswers);
+	const price = basePrice + addonPrice;
 
 	// 報名當下先預設「否」，是否已實際收款由負責人之後手動在 Sheet 上確認標註
 	const registrationId = await sheets.generateNextId('Registrations', '報名ID', 'R', 4);
@@ -47,7 +50,9 @@ export async function runSubmitRegistration(sheets, memberId, eventId, customFie
 		自訂欄位回覆: customFieldAnswers && Object.keys(customFieldAnswers).length > 0 ? JSON.stringify(customFieldAnswers) : ''
 	});
 
-	if (event['是否付費'] === '是') {
+	// 用實際算出來的總額判斷要不要留消費紀錄，不能只看活動本身是否付費——
+	// 免費活動如果自訂欄位選了會加價的選項，一樣要收錢、要留紀錄
+	if (price > 0) {
 		const purchaseId = await sheets.generateNextId('Purchases', '消費ID', 'P', 4);
 		await sheets.appendRowFromObject('Purchases', {
 			消費ID: purchaseId,
@@ -60,6 +65,34 @@ export async function runSubmitRegistration(sheets, memberId, eventId, customFie
 	}
 
 	return { success: true, registrationId };
+}
+
+// 活動的「自訂欄位設定」JSON 裡每個選項可以帶 price，依報名者實際選的答案加總出加購金額；
+// 格式壞掉、欄位對不上、選項對不上都當作沒有加價，不能讓解析失敗擋住整個報名流程
+function calculateCustomFieldsAddonPrice(event, customFieldAnswers) {
+	if (!customFieldAnswers) return 0;
+
+	let fields;
+	try {
+		fields = JSON.parse(event['自訂欄位設定'] || '[]');
+	} catch (e) {
+		return 0;
+	}
+	if (!Array.isArray(fields)) return 0;
+
+	let addon = 0;
+	for (const field of fields) {
+		const answer = customFieldAnswers[field.label];
+		if (answer === undefined) continue;
+
+		const options = field.options || [];
+		const selectedLabels = Array.isArray(answer) ? answer : [answer];
+		for (const selectedLabel of selectedLabels) {
+			const option = options.find((o) => o.label === selectedLabel);
+			if (option && option.price) addon += Number(option.price) || 0;
+		}
+	}
+	return addon;
 }
 
 async function hasAlreadyRegistered(sheets, memberId, eventId) {

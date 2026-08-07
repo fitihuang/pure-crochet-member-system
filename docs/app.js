@@ -155,25 +155,55 @@ function parseEventCustomFields(rawJson) {
 	}
 }
 
-// 組出報名表單裡自訂欄位的 HTML，select 是單選、checkbox 是可複選、text 是自由留言
+// 選項現在是 {label, price} 物件（price 選填，沒填就是 0，不影響金額）；這裡統一補一個顯示用的加價說明
+function formatOptionPriceHint(price) {
+	return price ? '（+$' + price + '）' : '';
+}
+
+// 組出報名表單裡自訂欄位的 HTML，select 是單選、checkbox 是可複選、text 是自由留言；
+// select/checkbox 選了會加價的選項時，透過 onchange 即時更新下面的加購小計
 function buildCustomFieldsFormHtml(fields) {
-	return fields.map(function (field, index) {
+	var html = fields.map(function (field, index) {
 		var labelHtml = '<div style="margin-bottom:14px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">' + field.label + '</span>';
 		if (field.type === 'select') {
 			var options = '<option value="">請選擇</option>' + (field.options || []).map(function (opt) {
-				return '<option value="' + opt + '">' + opt + '</option>';
+				return '<option value="' + opt.label + '">' + opt.label + formatOptionPriceHint(opt.price) + '</option>';
 			}).join('');
-			return labelHtml + '<select id="customField_' + index + '" style="width:100%;padding:10px;font-size:14px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;background:#fff;">' + options + '</select></div>';
+			return labelHtml + '<select id="customField_' + index + '" onchange="updateCustomFieldsEstimate()" style="width:100%;padding:10px;font-size:14px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;background:#fff;">' + options + '</select></div>';
 		}
 		if (field.type === 'checkbox') {
 			var checkboxes = (field.options || []).map(function (opt, optIndex) {
 				return '<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:14px;">' +
-					'<input type="checkbox" id="customField_' + index + '_' + optIndex + '" style="width:auto;margin:0;">' + opt + '</label>';
+					'<input type="checkbox" id="customField_' + index + '_' + optIndex + '" onchange="updateCustomFieldsEstimate()" style="width:auto;margin:0;">' + opt.label + formatOptionPriceHint(opt.price) + '</label>';
 			}).join('');
 			return labelHtml + '<div>' + checkboxes + '</div></div>';
 		}
 		return labelHtml + '<textarea id="customField_' + index + '" style="width:100%;min-height:60px;padding:10px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;"></textarea></div>';
 	}).join('');
+	return html + '<div id="customFieldsEstimate" style="font-size:13px;color:#8a5a3c;text-align:right;"></div>';
+}
+
+// 目前彈窗裡正在顯示的欄位設定，給 updateCustomFieldsEstimate 讀，不用整包答案物件重算一次
+var activeCustomFieldsForEstimate = [];
+
+// 即時算出目前勾選/選擇的加價選項合計，讓使用者填的時候就知道要多付多少（正式金額還是由後端依同一份欄位設定重算，不會信任前端算出來的數字）
+function updateCustomFieldsEstimate() {
+	var el = document.getElementById('customFieldsEstimate');
+	if (!el) return;
+	var total = 0;
+	activeCustomFieldsForEstimate.forEach(function (field, index) {
+		if (field.type === 'select') {
+			var select = document.getElementById('customField_' + index);
+			var chosen = (field.options || []).filter(function (opt) { return select && opt.label === select.value; })[0];
+			if (chosen) total += Number(chosen.price) || 0;
+		} else if (field.type === 'checkbox') {
+			(field.options || []).forEach(function (opt, optIndex) {
+				var box = document.getElementById('customField_' + index + '_' + optIndex);
+				if (box && box.checked) total += Number(opt.price) || 0;
+			});
+		}
+	});
+	el.textContent = total > 0 ? '加購小計：$' + total : '';
 }
 
 // 從表單讀出填寫的值，組成 {欄位標題: 值} 的物件；select/text 是字串，checkbox 是陣列，沒填的欄位不會出現在結果裡
@@ -184,7 +214,7 @@ function collectCustomFieldAnswers(fields) {
 			var checked = (field.options || []).filter(function (opt, optIndex) {
 				var el = document.getElementById('customField_' + index + '_' + optIndex);
 				return el && el.checked;
-			});
+			}).map(function (opt) { return opt.label; });
 			if (checked.length > 0) answers[field.label] = checked;
 		} else {
 			var el = document.getElementById('customField_' + index);
@@ -202,6 +232,7 @@ function showRegistrationForm(event, onConfirmed) {
 		onConfirmed({});
 		return;
 	}
+	activeCustomFieldsForEstimate = fields;
 	var overlay = document.createElement('div');
 	overlay.className = 'appModalOverlay';
 	overlay.innerHTML = '' +

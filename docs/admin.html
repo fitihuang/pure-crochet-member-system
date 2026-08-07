@@ -590,10 +590,24 @@
 					'</select></div>' +
 					'<div><span class="fieldLabel">欄位標題</span><input value="' + (field.label || '') + '" onchange="updateEventCustomFieldLabel(' + index + ', this.value)"></div>' +
 					'</div>' +
-					(needsOptions ? '<span class="fieldLabel">選項（用逗號分隔）</span><input value="' + (field.options || []).join(',') + '" onchange="updateEventCustomFieldOptions(' + index + ', this.value)">' : '') +
+					(needsOptions ? renderEventCustomFieldOptionsEditor(index, field.options || []) : '') +
 					'<button type="button" class="dangerButton smallButton" onclick="removeEventCustomField(' + index + ')">刪除這個欄位</button>' +
 					'</div>';
 			}).join('');
+		}
+
+		// 每個選項各自獨立一列：名稱＋加價金額，不是每個選項都會加價，金額留空/0 就是不加價
+		function renderEventCustomFieldOptionsEditor(fieldIndex, options) {
+			var rows = options.map(function (opt, optIndex) {
+				return '' +
+					'<div class="formRow">' +
+					'<div><span class="fieldLabel">選項名稱</span><input value="' + (opt.label || '') + '" onchange="updateEventCustomFieldOptionLabel(' + fieldIndex + ',' + optIndex + ', this.value)"></div>' +
+					'<div style="max-width:120px;"><span class="fieldLabel">加價金額</span><input type="number" value="' + (opt.price || 0) + '" onchange="updateEventCustomFieldOptionPrice(' + fieldIndex + ',' + optIndex + ', this.value)"></div>' +
+					'<button type="button" class="dangerButton smallButton" style="align-self:flex-start;margin-top:18px;" onclick="removeEventCustomFieldOption(' + fieldIndex + ',' + optIndex + ')">刪除</button>' +
+					'</div>';
+			}).join('');
+			return '<span class="fieldLabel">選項</span>' + rows +
+				'<button type="button" class="secondaryButton smallButton" onclick="addEventCustomFieldOption(' + fieldIndex + ')">＋ 新增選項</button>';
 		}
 
 		function addEventCustomField() {
@@ -616,8 +630,23 @@
 			currentEventCustomFields[index].label = label;
 		}
 
-		function updateEventCustomFieldOptions(index, optionsStr) {
-			currentEventCustomFields[index].options = optionsStr.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+		function addEventCustomFieldOption(fieldIndex) {
+			if (!currentEventCustomFields[fieldIndex].options) currentEventCustomFields[fieldIndex].options = [];
+			currentEventCustomFields[fieldIndex].options.push({ label: '', price: 0 });
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+		}
+
+		function removeEventCustomFieldOption(fieldIndex, optionIndex) {
+			currentEventCustomFields[fieldIndex].options.splice(optionIndex, 1);
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+		}
+
+		function updateEventCustomFieldOptionLabel(fieldIndex, optionIndex, label) {
+			currentEventCustomFields[fieldIndex].options[optionIndex].label = label;
+		}
+
+		function updateEventCustomFieldOptionPrice(fieldIndex, optionIndex, price) {
+			currentEventCustomFields[fieldIndex].options[optionIndex].price = Number(price) || 0;
 		}
 
 		function resetEventForm() {
@@ -698,8 +727,12 @@
 				'狀態': document.getElementById('eventStatusInput').value,
 				'活動大綱': document.getElementById('eventOutlineInput').value,
 				'活動內容': document.getElementById('eventDescriptionInput').value,
-				// 標題留空的欄位不算數，存的時候順便濾掉
-				'自訂欄位設定': JSON.stringify(currentEventCustomFields.filter(function (f) { return f.label; })),
+				// 標題留空的欄位、名稱留空的選項都不算數，存的時候順便濾掉
+				'自訂欄位設定': JSON.stringify(
+					currentEventCustomFields.filter(function (f) { return f.label; }).map(function (f) {
+						return { type: f.type, label: f.label, options: (f.options || []).filter(function (o) { return o.label; }) };
+					})
+				),
 				'活動封面圖片網址': document.getElementById('eventImageInput').value
 			};
 			showLockOverlay(eventId ? '更新活動中...' : '新增活動中...');
