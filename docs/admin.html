@@ -349,13 +349,13 @@
 				'<div id="eventFormArea">' + renderEventForm(null) + '</div>' +
 				'<div id="eventListArea">' + renderEventList() + '</div>' +
 				'</div>' +
+				'<div class="card" id="registrationSection" style="display:none;"></div>' +
 				'<div class="card" id="lessonSection">' +
 				'<h2>一對一預約管理</h2>' +
 				'<div id="lessonSettingsArea">' + renderLessonSettingsForm() + '</div>' +
 				'<div id="lessonFormArea">' + renderLessonForm() + '</div>' +
 				'<div id="lessonListArea">' + renderLessonList() + '</div>' +
-				'</div>' +
-				'<div class="card" id="registrationSection" style="display:none;"></div>'
+				'</div>'
 			);
 		}
 
@@ -970,7 +970,7 @@
 					return '' +
 						'<div class="listRow">' +
 						'<div class="listRowInfo">' + r['會員姓名'] + paidHtml + '<span class="tagSmall">' + r['佔用名額類別名稱'] + '</span><br>' +
-						'<span style="color:#8c8378;font-size:12px;">報名時間：' + formatDate(r['報名時間']) + '</span>' +
+						'<span style="color:#8c8378;font-size:12px;">報名時間：' + formatDate(r['報名時間']) + '　金額：' + r['金額'] + '</span>' +
 						formatCustomFieldAnswersHtml(r['自訂欄位回覆']) +
 						'</div>' +
 						'<div class="listRowActions">' +
