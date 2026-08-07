@@ -41,22 +41,6 @@ export async function findMemberByLineUserId(sheets, lineUserId) {
 	return members.find((m) => m['LINE userId'] === lineUserId) || null;
 }
 
-// 既有會員首次登入，用手機或 Email 擇一核對成功後把 LINE userId 寫回該列
-export async function bindLineUserId(sheets, auth, phoneOrEmail) {
-	const members = await sheets.getSheetAsObjects('Members');
-	const matched = members.find((m) => m['手機'] === phoneOrEmail || m['Email'] === phoneOrEmail);
-
-	// 「查無資料」跟「已經被綁過」用同一句錯誤訊息，不能讓人靠錯誤訊息去猜別人的手機/Email 存不存在，
-	// 也不能讓已綁定的會員被其他人用同一組手機/Email 蓋掉綁定
-	const genericError = '找不到符合的會員資料，或該會員已完成綁定，請聯繫負責人確認';
-	if (!matched || matched['LINE userId']) {
-		return { success: false, error: genericError };
-	}
-
-	await sheets.updateRowFromObject('Members', matched._rowNumber, { 'LINE userId': auth.lineUserId });
-	return { success: true };
-}
-
 // 全新的人（連既有會員資料都沒有）自己填資料申請加入，先建一筆「待審核」的會員資料，
 // LINE userId 這時就先綁上去（本來就是這個人自己登入送出的），審核通過前只會看到審核中畫面
 export async function applyForMembership(sheets, env, auth, memberData) {

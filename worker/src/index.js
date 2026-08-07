@@ -2,7 +2,7 @@ import { verifyLineToken } from './auth.js';
 import { createSheetsClient } from './sheetsApi.js';
 import { getGradeList } from './grades.js';
 import {
-	getMemberProfile, bindLineUserId, getAllMembers, createMember, updateMember,
+	getMemberProfile, getAllMembers, createMember, updateMember,
 	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
@@ -22,7 +22,7 @@ const CORS_HEADERS = {
 
 // 需要登入身份的 action，統一在分派前驗證一次，業務邏輯函式就不用各自重打一次 LINE API
 const AUTH_REQUIRED_ACTIONS = new Set([
-	'getMemberProfile', 'bindLineUserId', 'getAllMembers', 'createMember', 'updateMember',
+	'getMemberProfile', 'getAllMembers', 'createMember', 'updateMember',
 	'applyForMembership', 'rejectMemberApplication',
 	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
 	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'checkAllMembersUpgrade',
@@ -97,8 +97,6 @@ async function handleApiRequest(env, params) {
 			}
 			return profile;
 		}
-		case 'bindLineUserId':
-			return bindLineUserId(sheets, auth, params.phoneOrEmail);
 		case 'applyForMembership':
 			return applyForMembership(sheets, env, auth, params.memberData);
 		case 'rejectMemberApplication':

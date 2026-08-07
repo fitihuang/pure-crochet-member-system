@@ -394,23 +394,14 @@
 			showError('LIFF 初始化失敗：' + err);
 		});
 
-		// 三個入口共用同一個畫面：不管是還沒登入的新訪客、還是登入後找不到對應會員資料（needBinding）都會看到這個畫面
+		// 還沒登入的新訪客、還是登入後找不到對應會員資料（needBinding）都會看到這個畫面
 		function showLoginScreen() {
 			showApp('' +
 				'<div class="card">' +
 				'<h2 style="text-align:center;">Pure Crochet 會員系統</h2>' +
 				'<p style="font-size:13px;text-align:center;color:#8c8378;margin-top:16px;">已是會員</p>' +
-				'<hr style="border:none;border-top:1px solid #f0e8dd;margin:10px 0 16px;">' +
-				'<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
-				'<div style="flex:1;min-width:200px;">' +
-				'<span class="fieldLabel" style="font-size:12px;color:#a89a8a;">第一次使用會員系統</span>' +
-				'<p style="font-size:13px;color:#8c8378;margin-top:4px;">請輸入你在會員資料留的手機或 Email：</p>' +
-				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
-				'<button onclick="submitBinding()" style="display:block;margin:0 auto;">確認綁定</button>' +
-				'</div>' +
-				'<div class="loginSplitRight" style="flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;">' +
+				'<div style="display:flex;justify-content:center;margin-top:16px;">' +
 				'<button class="secondaryButton" onclick="liff.login({redirectUri: location.href})" style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;">使用 LINE 登入</button>' +
-				'</div>' +
 				'</div>' +
 				'<hr style="border:none;border-top:1px solid #f0e8dd;margin:20px 0;">' +
 				'<p style="font-size:13px;text-align:center;color:#8c8378;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
@@ -883,22 +874,6 @@
 						appAlert(err.message);
 					});
 			});
-		}
-
-		// 這三個入口（綁定／LINE登入／申請）都需要先有 idToken 才能真的送出，還沒登入就點的話先去登入，
-		// 順便走過一次 LINE 登入導轉，回來後一樣會落在這個畫面，重新輸入一次即可
-		function submitBinding() {
-			if (!idToken) { liff.login({ redirectUri: location.href }); return; }
-			var value = document.getElementById('bindInput').value;
-			callApi('bindLineUserId', { idToken: idToken, phoneOrEmail: value })
-				.then(function (result) {
-					if (result.success) {
-						loadProfile();
-					} else {
-						appAlert(result.error);
-					}
-				})
-				.catch(function (err) { appAlert(err.message); });
 		}
 
 		function renderApplyForm() {
