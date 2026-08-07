@@ -56,6 +56,17 @@ function initLiff() {
 	return liff.init({ liffId: LIFF_ID });
 }
 
+// 開啟外部連結（例如私訊官方帳號）：在 LINE App 內建瀏覽器打開時，一般的 <a target="_blank">
+// 常常只是換到另一個內嵌網頁、不會真的切到聊天畫面，要用 liff.openWindow 加 external:true
+// 才能可靠地跳出去開啟對應的畫面（手機上是 LINE App 本身，桌機/沒裝 App 則是官方網站）
+function openExternalUrl(url) {
+	if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+		liff.openWindow({ url: url, external: true });
+	} else {
+		window.open(url, '_blank');
+	}
+}
+
 function formatDate(value) {
 	if (!value) return '';
 	var date = new Date(value);

@@ -723,7 +723,7 @@
 			if (!lessonInfo.canBookLesson) {
 				html += '<p>第一次預約請先私訊我們約時間，之後就可以直接在這裡自己選時段囉！</p>';
 				if (lessonInfo.lineContactUrl) {
-					html += '<a href="' + lessonInfo.lineContactUrl + '" target="_blank"><button>私訊預約第一次一對一</button></a>';
+					html += '<button onclick="openExternalUrl(\'' + lessonInfo.lineContactUrl + '\')">私訊預約第一次一對一</button>';
 				}
 			} else {
 				var durationOptionsHtml = lessonInfo.durationOptions.map(function (d) {
