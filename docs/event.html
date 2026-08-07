@@ -241,7 +241,10 @@
 			});
 		}
 
+		var currentEvent = null;
+
 		function renderDetail(event, profile) {
+			currentEvent = event;
 			var feeHtml = event['是否付費'] === '是'
 				? '<span class="feeTag">💰 $' + getDisplayPrice(event, profile && profile.grade) + '</span>'
 				: '<span class="freeTag">免費</span>';
@@ -291,17 +294,19 @@
 		}
 
 		function register() {
-			showLockOverlay('報名處理中，請稍候...');
-			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
-				.then(function () {
-					hideLockOverlay();
-					appAlert('報名成功！');
-					location.href = 'index.html';
-				})
-				.catch(function (err) {
-					hideLockOverlay();
-					appAlert('報名失敗：' + err.message);
-				});
+			showRegistrationForm(currentEvent || {}, function (customFieldAnswers) {
+				showLockOverlay('報名處理中，請稍候...');
+				callApi('submitRegistration', { idToken: idToken, eventId: eventId, customFieldAnswers: customFieldAnswers })
+					.then(function () {
+						hideLockOverlay();
+						appAlert('報名成功！');
+						location.href = 'index.html';
+					})
+					.catch(function (err) {
+						hideLockOverlay();
+						appAlert('報名失敗：' + err.message);
+					});
+			});
 		}
 	</script>
 </body>

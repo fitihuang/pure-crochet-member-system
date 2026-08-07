@@ -142,6 +142,103 @@ function appAlert(message) {
 	return showAppModal(message, false);
 }
 
+// ---------- 活動自訂報名欄位（下拉選單／多選 checkbox／自由留言） ----------
+
+// 活動的「自訂欄位設定」存在 Sheet 裡是一段 JSON 字串，格式不對或沒設定都當作沒有欄位，不能因此擋住報名
+function parseEventCustomFields(rawJson) {
+	if (!rawJson) return [];
+	try {
+		var fields = JSON.parse(rawJson);
+		return Array.isArray(fields) ? fields : [];
+	} catch (e) {
+		return [];
+	}
+}
+
+// 組出報名表單裡自訂欄位的 HTML，select 是單選、checkbox 是可複選、text 是自由留言
+function buildCustomFieldsFormHtml(fields) {
+	return fields.map(function (field, index) {
+		var labelHtml = '<div style="margin-bottom:14px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">' + field.label + '</span>';
+		if (field.type === 'select') {
+			var options = '<option value="">請選擇</option>' + (field.options || []).map(function (opt) {
+				return '<option value="' + opt + '">' + opt + '</option>';
+			}).join('');
+			return labelHtml + '<select id="customField_' + index + '" style="width:100%;padding:10px;font-size:14px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;background:#fff;">' + options + '</select></div>';
+		}
+		if (field.type === 'checkbox') {
+			var checkboxes = (field.options || []).map(function (opt, optIndex) {
+				return '<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:14px;">' +
+					'<input type="checkbox" id="customField_' + index + '_' + optIndex + '" style="width:auto;margin:0;">' + opt + '</label>';
+			}).join('');
+			return labelHtml + '<div>' + checkboxes + '</div></div>';
+		}
+		return labelHtml + '<textarea id="customField_' + index + '" style="width:100%;min-height:60px;padding:10px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;"></textarea></div>';
+	}).join('');
+}
+
+// 從表單讀出填寫的值，組成 {欄位標題: 值} 的物件；select/text 是字串，checkbox 是陣列，沒填的欄位不會出現在結果裡
+function collectCustomFieldAnswers(fields) {
+	var answers = {};
+	fields.forEach(function (field, index) {
+		if (field.type === 'checkbox') {
+			var checked = (field.options || []).filter(function (opt, optIndex) {
+				var el = document.getElementById('customField_' + index + '_' + optIndex);
+				return el && el.checked;
+			});
+			if (checked.length > 0) answers[field.label] = checked;
+		} else {
+			var el = document.getElementById('customField_' + index);
+			if (el && el.value) answers[field.label] = el.value;
+		}
+	});
+	return answers;
+}
+
+// 報名前如果這場活動有設定自訂欄位，先彈出表單讓使用者填，填完（或取消）才決定要不要真的送出報名；
+// 沒設定自訂欄位就直接呼叫 onConfirmed，維持原本點一下按鈕就報名的行為
+function showRegistrationForm(event, onConfirmed) {
+	var fields = parseEventCustomFields(event['自訂欄位設定']);
+	if (fields.length === 0) {
+		onConfirmed({});
+		return;
+	}
+	var overlay = document.createElement('div');
+	overlay.className = 'appModalOverlay';
+	overlay.innerHTML = '' +
+		'<div class="appModalBox" style="max-width:360px;max-height:80vh;overflow-y:auto;">' +
+		'<div class="appModalTitle">報名前請填寫以下資訊</div>' +
+		buildCustomFieldsFormHtml(fields) +
+		'<div class="appModalButtons">' +
+		'<button class="appModalCancelBtn" style="background:#f2ede6;color:#8a5a3c;">取消</button>' +
+		'<button class="appModalOkBtn">確認報名</button>' +
+		'</div>' +
+		'</div>';
+	document.body.appendChild(overlay);
+	overlay.querySelector('.appModalCancelBtn').onclick = function () { overlay.remove(); };
+	overlay.querySelector('.appModalOkBtn').onclick = function () {
+		var answers = collectCustomFieldAnswers(fields);
+		overlay.remove();
+		onConfirmed(answers);
+	};
+}
+
+// 給後台報名名單用：把存起來的自訂欄位回覆 JSON 字串轉成一行一行的文字，checkbox 的多個答案用頓號連起來
+function formatCustomFieldAnswersHtml(rawJson) {
+	if (!rawJson) return '';
+	var answers;
+	try {
+		answers = JSON.parse(rawJson);
+	} catch (e) {
+		return '';
+	}
+	var lines = Object.keys(answers).map(function (label) {
+		var value = answers[label];
+		return label + '：' + (Array.isArray(value) ? value.join('、') : value);
+	});
+	if (lines.length === 0) return '';
+	return '<div style="color:#8c8378;font-size:12px;margin-top:2px;">' + lines.join('<br>') + '</div>';
+}
+
 function appConfirm(message) {
 	return showAppModal(message, true);
 }

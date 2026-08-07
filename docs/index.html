@@ -692,17 +692,20 @@
 		}
 
 		function register(eventId) {
-			showLockOverlay('報名處理中，請稍候...');
-			callApi('submitRegistration', { idToken: idToken, eventId: eventId })
-				.then(function () {
-					hideLockOverlay();
-					appAlert('報名成功！');
-					loadProfile();
-				})
-				.catch(function (err) {
-					hideLockOverlay();
-					appAlert('報名失敗：' + err.message);
-				});
+			var event = calendarEvents.filter(function (e) { return e['活動ID'] === eventId; })[0] || {};
+			showRegistrationForm(event, function (customFieldAnswers) {
+				showLockOverlay('報名處理中，請稍候...');
+				callApi('submitRegistration', { idToken: idToken, eventId: eventId, customFieldAnswers: customFieldAnswers })
+					.then(function () {
+						hideLockOverlay();
+						appAlert('報名成功！');
+						loadProfile();
+					})
+					.catch(function (err) {
+						hideLockOverlay();
+						appAlert('報名失敗：' + err.message);
+					});
+			});
 		}
 
 		// ---------- 一對一教學預約 ----------

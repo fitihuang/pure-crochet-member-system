@@ -7,13 +7,13 @@ function nowAsTaipeiDateTimeString() {
 	return toSheetsDateTimeString(new Date());
 }
 
-export async function submitRegistration(sheets, auth, eventId) {
+export async function submitRegistration(sheets, auth, eventId, customFieldAnswers) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
 	if (!member) throw new Error('找不到會員資料，請先完成帳號綁定');
-	return runSubmitRegistration(sheets, member['會員ID'], eventId);
+	return runSubmitRegistration(sheets, member['會員ID'], eventId, customFieldAnswers);
 }
 
-export async function runSubmitRegistration(sheets, memberId, eventId) {
+export async function runSubmitRegistration(sheets, memberId, eventId, customFieldAnswers) {
 	const member = await findMemberById(sheets, memberId);
 	if (!member) throw new Error('找不到會員資料');
 
@@ -42,7 +42,9 @@ export async function runSubmitRegistration(sheets, memberId, eventId) {
 		報名時等級snapshot: gradeId,
 		佔用名額類別: gradeId,
 		是否付費: '否',
-		金額: price
+		金額: price,
+		// 活動如果有設定自訂報名欄位（下拉選單/checkbox/留言），答案存成 JSON 字串；沒填就存空字串
+		自訂欄位回覆: customFieldAnswers && Object.keys(customFieldAnswers).length > 0 ? JSON.stringify(customFieldAnswers) : ''
 	});
 
 	if (event['是否付費'] === '是') {

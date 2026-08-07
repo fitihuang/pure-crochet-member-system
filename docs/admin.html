@@ -514,8 +514,12 @@
 
 		// ---------- 活動管理 ----------
 
+		// 編輯活動表單時，暫存目前正在編輯的自訂報名欄位設定（存 Sheet 前才序列化成 JSON）
+		var currentEventCustomFields = [];
+
 		function renderEventForm(event) {
 			var isEdit = !!event;
+			currentEventCustomFields = isEdit ? parseEventCustomFields(event['自訂欄位設定']) : [];
 			return '' +
 				'<div class="formBox">' +
 				'<h3>' + (isEdit ? '編輯活動：' + event['活動名稱'] : '新增活動') + '</h3>' +
@@ -557,6 +561,11 @@
 				'<textarea id="eventOutlineInput">' + (isEdit ? (event['活動大綱'] || '') : '') + '</textarea>' +
 				'<span class="fieldLabel">活動內容（活動詳情頁會跟大綱一起顯示）</span>' +
 				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動內容'] || '') : '') + '</textarea>' +
+				'<div class="formBox">' +
+				'<h3>報名自訂欄位（選填，例如飲料選擇、加購項目、投票留言）</h3>' +
+				'<div id="eventCustomFieldsArea">' + renderEventCustomFieldsEditor() + '</div>' +
+				'<button type="button" class="secondaryButton smallButton" onclick="addEventCustomField()">+ 新增欄位</button>' +
+				'</div>' +
 				'<span class="fieldLabel">活動封面圖片網址</span>' +
 				'<input id="eventImageInput" value="' + (isEdit ? (event['活動封面圖片網址'] || '') : '') + '">' +
 				'<input id="eventImageFileInput" type="file" accept="image/*" onchange="uploadEventImage(this)">' +
@@ -564,6 +573,51 @@
 				'<button onclick="saveEvent(' + (isEdit ? "'" + event['活動ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增活動') + '</button> ' +
 				(isEdit ? '<button class="secondaryButton" onclick="resetEventForm()">取消編輯</button>' : '') +
 				'</div>';
+		}
+
+		function renderEventCustomFieldsEditor() {
+			if (currentEventCustomFields.length === 0) return '<p style="font-size:13px;color:#8c8378;">目前沒有自訂欄位</p>';
+			return currentEventCustomFields.map(function (field, index) {
+				var needsOptions = field.type === 'select' || field.type === 'checkbox';
+				return '' +
+					'<div class="formBox" style="background:#fff;border:1px solid #f0e8dd;">' +
+					'<div class="formRow">' +
+					'<div><span class="fieldLabel">類型</span>' +
+					'<select onchange="updateEventCustomFieldType(' + index + ', this.value)">' +
+					'<option value="select"' + (field.type === 'select' ? ' selected' : '') + '>下拉選單（單選）</option>' +
+					'<option value="checkbox"' + (field.type === 'checkbox' ? ' selected' : '') + '>多選核取方塊</option>' +
+					'<option value="text"' + (field.type === 'text' ? ' selected' : '') + '>自由留言</option>' +
+					'</select></div>' +
+					'<div><span class="fieldLabel">欄位標題</span><input value="' + (field.label || '') + '" onchange="updateEventCustomFieldLabel(' + index + ', this.value)"></div>' +
+					'</div>' +
+					(needsOptions ? '<span class="fieldLabel">選項（用逗號分隔）</span><input value="' + (field.options || []).join(',') + '" onchange="updateEventCustomFieldOptions(' + index + ', this.value)">' : '') +
+					'<button type="button" class="dangerButton smallButton" onclick="removeEventCustomField(' + index + ')">刪除這個欄位</button>' +
+					'</div>';
+			}).join('');
+		}
+
+		function addEventCustomField() {
+			currentEventCustomFields.push({ type: 'select', label: '', options: [] });
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+		}
+
+		function removeEventCustomField(index) {
+			currentEventCustomFields.splice(index, 1);
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+		}
+
+		// 換類型時把選項清掉重畫（select/checkbox 才需要選項欄位，自由留言不用）
+		function updateEventCustomFieldType(index, type) {
+			currentEventCustomFields[index].type = type;
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+		}
+
+		function updateEventCustomFieldLabel(index, label) {
+			currentEventCustomFields[index].label = label;
+		}
+
+		function updateEventCustomFieldOptions(index, optionsStr) {
+			currentEventCustomFields[index].options = optionsStr.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 		}
 
 		function resetEventForm() {
@@ -644,6 +698,8 @@
 				'狀態': document.getElementById('eventStatusInput').value,
 				'活動大綱': document.getElementById('eventOutlineInput').value,
 				'活動內容': document.getElementById('eventDescriptionInput').value,
+				// 標題留空的欄位不算數，存的時候順便濾掉
+				'自訂欄位設定': JSON.stringify(currentEventCustomFields.filter(function (f) { return f.label; })),
 				'活動封面圖片網址': document.getElementById('eventImageInput').value
 			};
 			showLockOverlay(eventId ? '更新活動中...' : '新增活動中...');
@@ -882,6 +938,7 @@
 						'<div class="listRow">' +
 						'<div class="listRowInfo">' + r['會員姓名'] + paidHtml + '<span class="tagSmall">' + r['佔用名額類別名稱'] + '</span><br>' +
 						'<span style="color:#8c8378;font-size:12px;">報名時間：' + formatDate(r['報名時間']) + '</span>' +
+						formatCustomFieldAnswersHtml(r['自訂欄位回覆']) +
 						'</div>' +
 						'<div class="listRowActions">' +
 						'<button class="secondaryButton smallButton" onclick="togglePayment(\'' + eventId + '\', \'' + r['報名ID'] + '\', ' + (r['是否付費'] !== '是') + ')">' +
