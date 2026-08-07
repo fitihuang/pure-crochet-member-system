@@ -71,7 +71,7 @@ export async function runSubmitRegistration(sheets, env, memberId, eventId, cust
 		await pushMessageToUser(env, member['LINE userId'],
 			'✅ 報名成功通知\n活動：' + event['活動名稱'] +
 			'\n日期：' + toTaipeiDateString(new Date(event['活動日期'])) +
-			(price > 0 ? '\n應繳金額：' + price : ''));
+			(price > 0 ? '\n應繳金額：' + price + '\n\n繳費完成後，請主動與我們確認，確保報名成功' : ''));
 	} catch (err) {
 		console.log('報名成功通知推播失敗：', err.message);
 	}
