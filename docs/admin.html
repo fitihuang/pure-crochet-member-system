@@ -765,6 +765,9 @@
 					'<div class="listRowActions">' +
 					'<button class="secondaryButton smallButton" onclick="editEvent(\'' + e['活動ID'] + '\')">編輯</button>' +
 					'<button class="smallButton" onclick="viewRegistrations(\'' + e['活動ID'] + '\')">報名名單</button>' +
+					(parseEventCustomFields(e['自訂欄位設定']).length > 0
+						? '<a class="linkButton smallButton" style="text-decoration:none;" target="_blank" href="admin-event-stats.html?eventId=' + e['活動ID'] + '">欄位統計</a>'
+						: '') +
 					'<button class="dangerButton smallButton" onclick="deleteEventHandler(\'' + e['活動ID'] + '\')">刪除</button>' +
 					'</div>' +
 					'</div>';

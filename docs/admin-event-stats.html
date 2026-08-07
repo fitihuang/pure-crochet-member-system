@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>報名自訂欄位統計 - Pure Crochet</title>
+	<link rel="icon" type="image/png" href="favicon.png">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+	<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+	<script src="app.js"></script>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			font-family: "Noto Sans TC", -apple-system, "Helvetica Neue", Arial, sans-serif;
+			background: #faf6f0;
+			color: #3a3530;
+			margin: 0;
+			padding-bottom: 32px;
+		}
+		.topBar {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: #fff;
+			padding: 14px 16px;
+			box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+			margin-bottom: 16px;
+		}
+		.topBarTitle {
+			font-size: 16px;
+			font-weight: 700;
+			color: #8a5a3c;
+		}
+		.main {
+			padding: 0 16px;
+			max-width: 640px;
+			margin: 0 auto;
+		}
+		.card {
+			background: #fff;
+			border-radius: 16px;
+			padding: 18px;
+			margin-bottom: 16px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+		}
+		.card h2 {
+			font-size: 15px;
+			margin: 0 0 12px;
+			color: #8a5a3c;
+			font-weight: 700;
+		}
+		.card h3 {
+			font-size: 14px;
+			margin: 0 0 10px;
+		}
+		button {
+			background: #a67c52;
+			color: #fff;
+			border: none;
+			border-radius: 10px;
+			padding: 9px 16px;
+			font-size: 14px;
+			cursor: pointer;
+		}
+		.secondaryButton {
+			background: #f2ede6;
+			color: #8a5a3c;
+		}
+		.linkButton {
+			background: #e5f1f5;
+			color: #4a7a8c;
+			font-size: 12px;
+			padding: 6px 12px;
+		}
+		.optionRow {
+			display: flex;
+			justify-content: space-between;
+			align-items: baseline;
+			gap: 12px;
+			border-bottom: 1px solid #f2ede6;
+			padding: 10px 0;
+		}
+		.optionRow:last-child {
+			border-bottom: none;
+		}
+		.optionLabel {
+			font-size: 14px;
+			font-weight: 500;
+			flex-shrink: 0;
+		}
+		.optionCount {
+			font-size: 12px;
+			color: #a67c52;
+			font-weight: 700;
+			flex-shrink: 0;
+		}
+		.optionMembers {
+			font-size: 12px;
+			color: #8c8378;
+			flex: 1;
+			text-align: right;
+		}
+		.textAnswerRow {
+			font-size: 13px;
+			padding: 8px 0;
+			border-bottom: 1px solid #f2ede6;
+		}
+		.textAnswerRow:last-child {
+			border-bottom: none;
+		}
+		.textAnswerName {
+			color: #8a5a3c;
+			font-weight: 500;
+		}
+		.errorText {
+			color: #c0392b;
+			font-size: 14px;
+		}
+		.spinnerWrap {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			padding: 60px 0;
+			color: #a89a8a;
+			font-size: 13px;
+		}
+		.spinner {
+			width: 30px;
+			height: 30px;
+			border: 3px solid #ecdfd0;
+			border-top-color: #a67c52;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.appModalOverlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(58, 53, 48, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000;
+			padding: 20px;
+		}
+		.appModalBox {
+			background: #fff;
+			border-radius: 16px;
+			padding: 20px;
+			max-width: 320px;
+			width: 100%;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+		}
+		.appModalTitle {
+			font-size: 14px;
+			font-weight: 700;
+			color: #8a5a3c;
+			margin-bottom: 10px;
+		}
+		.appModalMessage {
+			font-size: 14px;
+			color: #3a3530;
+			white-space: pre-wrap;
+			margin-bottom: 18px;
+		}
+		.appModalButtons {
+			display: flex;
+			justify-content: flex-end;
+			gap: 8px;
+		}
+	</style>
+</head>
+<body>
+	<div class="topBar">
+		<span class="topBarTitle">報名自訂欄位統計</span>
+		<div class="topBarActions">
+			<a class="linkButton" style="text-decoration:none;" href="admin.html">回後台</a>
+		</div>
+	</div>
+	<div class="main">
+		<div id="app">
+			<div class="spinnerWrap"><div class="spinner"></div>初始化中...</div>
+		</div>
+	</div>
+
+	<script>
+		var idToken = null;
+		var eventId = new URLSearchParams(location.search).get('eventId');
+
+		function showApp(html) {
+			document.getElementById('app').innerHTML = html;
+		}
+
+		function showLoading(text) {
+			showApp('<div class="spinnerWrap"><div class="spinner"></div>' + (text || '載入中...') + '</div>');
+		}
+
+		function showError(message) {
+			showApp('<div class="card"><p class="errorText">' + message + '</p></div>');
+		}
+
+		if (!eventId) {
+			showError('網址缺少 eventId 參數');
+		} else {
+			initLiff().then(function () {
+				if (liff.isLoggedIn()) {
+					idToken = liff.getIDToken();
+					loadStats();
+				} else {
+					liff.login({ redirectUri: location.href });
+				}
+			}).catch(function (err) {
+				showError('LIFF 初始化失敗：' + err);
+			});
+		}
+
+		function loadStats() {
+			showLoading('確認權限並載入資料中...');
+			Promise.all([
+				callApi('getMemberProfile', { idToken: idToken }),
+				callApi('getEventDetail', { eventId: eventId }),
+				callApi('getEventRegistrationsForAdmin', { idToken: idToken, eventId: eventId })
+			]).then(function (results) {
+				if (!results[0].isAdmin) {
+					showError('你沒有管理後台的權限');
+					return;
+				}
+				renderStats(results[1], results[2]);
+			}).catch(function (err) { showError(err.message); });
+		}
+
+		// 依「自訂欄位設定」逐一整理每個 select/checkbox 選項各有幾人選、哪些會員選；
+		// text 類型沒有選項可以統計，改成直接列出每個人填的內容
+		function renderStats(event, registrations) {
+			var fields = parseEventCustomFields(event['自訂欄位設定']);
+			var html = '' +
+				'<div class="card">' +
+				'<h2>' + event['活動名稱'] + '</h2>' +
+				'<p style="font-size:13px;color:#8c8378;">共 ' + registrations.length + ' 筆報名</p>' +
+				'</div>';
+
+			if (fields.length === 0) {
+				html += '<div class="card"><p style="font-size:13px;color:#8c8378;">這場活動沒有設定自訂報名欄位</p></div>';
+				showApp(html);
+				return;
+			}
+
+			var answersList = registrations.map(function (r) {
+				var answers = {};
+				try {
+					answers = r['自訂欄位回覆'] ? JSON.parse(r['自訂欄位回覆']) : {};
+				} catch (e) {
+					answers = {};
+				}
+				return { name: r['會員姓名'], answers: answers };
+			});
+
+			fields.forEach(function (field) {
+				html += '<div class="card"><h3>' + field.label + '</h3>' + renderFieldStats(field, answersList) + '</div>';
+			});
+
+			showApp(html);
+		}
+
+		function renderFieldStats(field, answersList) {
+			if (field.type === 'text') {
+				var textRows = answersList.filter(function (a) { return a.answers[field.label]; }).map(function (a) {
+					return '<div class="textAnswerRow"><span class="textAnswerName">' + a.name + '</span>：' + a.answers[field.label] + '</div>';
+				});
+				return textRows.length > 0 ? textRows.join('') : '<p style="font-size:13px;color:#8c8378;">目前沒有人填寫</p>';
+			}
+
+			var options = field.options || [];
+			var rows = options.map(function (opt) {
+				var picked = answersList.filter(function (a) {
+					var value = a.answers[field.label];
+					if (value === undefined) return false;
+					return Array.isArray(value) ? value.indexOf(opt.label) !== -1 : value === opt.label;
+				});
+				return '' +
+					'<div class="optionRow">' +
+					'<span class="optionLabel">' + opt.label + '</span>' +
+					'<span class="optionCount">' + picked.length + ' 人</span>' +
+					'<span class="optionMembers">' + (picked.length > 0 ? picked.map(function (a) { return a.name; }).join('、') : '－') + '</span>' +
+					'</div>';
+			}).join('');
+
+			var unanswered = answersList.filter(function (a) { return a.answers[field.label] === undefined; });
+			var unansweredRow = '' +
+				'<div class="optionRow">' +
+				'<span class="optionLabel" style="color:#a89a8a;">未填寫</span>' +
+				'<span class="optionCount" style="color:#a89a8a;">' + unanswered.length + ' 人</span>' +
+				'<span class="optionMembers">' + (unanswered.length > 0 ? unanswered.map(function (a) { return a.name; }).join('、') : '－') + '</span>' +
+				'</div>';
+
+			return rows + unansweredRow;
+		}
+	</script>
+</body>
+</html>
