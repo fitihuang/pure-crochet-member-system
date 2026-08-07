@@ -1,19 +1,20 @@
 import { findMemberByLineUserId, findMemberById } from './members.js';
 import { findEventById, getEventPriceForGrade } from './events.js';
 import { getGradeById, getGradeIdByName } from './grades.js';
-import { todayAtMidnight, toSheetsDateTimeString } from './dateUtils.js';
+import { todayAtMidnight, toSheetsDateTimeString, toTaipeiDateString } from './dateUtils.js';
+import { pushMessageToUser } from './lineMessaging.js';
 
 function nowAsTaipeiDateTimeString() {
 	return toSheetsDateTimeString(new Date());
 }
 
-export async function submitRegistration(sheets, auth, eventId, customFieldAnswers) {
+export async function submitRegistration(sheets, env, auth, eventId, customFieldAnswers) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
 	if (!member) throw new Error('找不到會員資料，請先完成帳號綁定');
-	return runSubmitRegistration(sheets, member['會員ID'], eventId, customFieldAnswers);
+	return runSubmitRegistration(sheets, env, member['會員ID'], eventId, customFieldAnswers);
 }
 
-export async function runSubmitRegistration(sheets, memberId, eventId, customFieldAnswers) {
+export async function runSubmitRegistration(sheets, env, memberId, eventId, customFieldAnswers) {
 	const member = await findMemberById(sheets, memberId);
 	if (!member) throw new Error('找不到會員資料');
 
@@ -62,6 +63,16 @@ export async function runSubmitRegistration(sheets, memberId, eventId, customFie
 			金額: price,
 			關聯報名ID: registrationId
 		});
+	}
+
+	// 報名成功主動通知會員本人，跟 Calendar／管理員推播一樣走 fault-tolerant 模式，失敗不能擋掉報名結果
+	try {
+		await pushMessageToUser(env, member['LINE userId'],
+			'✅ 報名成功通知\n活動：' + event['活動名稱'] +
+			'\n日期：' + toTaipeiDateString(new Date(event['活動日期'])) +
+			(price > 0 ? '\n應繳金額：' + price : ''));
+	} catch (err) {
+		console.log('報名成功通知推播失敗：', err.message);
 	}
 
 	return { success: true, registrationId };

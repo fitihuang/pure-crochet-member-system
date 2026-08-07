@@ -120,7 +120,7 @@ async function handleApiRequest(env, params) {
 		case 'deleteEvent':
 			return deleteEvent(sheets, env, auth, params.eventId);
 		case 'submitRegistration':
-			return submitRegistration(sheets, auth, params.eventId, params.customFieldAnswers);
+			return submitRegistration(sheets, env, auth, params.eventId, params.customFieldAnswers);
 		case 'getEventRegistrationsForAdmin':
 			return getEventRegistrationsForAdmin(sheets, auth, params.eventId);
 		case 'updateRegistrationPayment':
