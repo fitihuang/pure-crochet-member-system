@@ -6,7 +6,7 @@ import {
 	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
-import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment } from './registrations.js';
+import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment, sendUpcomingEventReminders } from './registrations.js';
 import { getSettings, updateSettings } from './settings.js';
 import { uploadImageToR2 } from './imageUpload.js';
 import {
@@ -67,11 +67,13 @@ export default {
 	},
 
 	// wrangler.toml 的 [triggers] 設定了兩組 cron，這裡依觸發的是哪一組分流：
-	// 每日一次的對應原本 Apps Script 的 dailyMaintenance；高頻率那組是一對一課前提醒檢查
+	// 每日一次的對應原本 Apps Script 的 dailyMaintenance，順便檢查明天的活動要不要提醒報名者；
+	// 高頻率那組是一對一課前提醒檢查（需要分鐘級的精準度，不能等每日排程）
 	async scheduled(event, env) {
 		const sheets = createSheetsClient(env);
 		if (event.cron === '0 18 * * *') {
 			await runMemberUpgradeCheck(sheets);
+			await sendUpcomingEventReminders(sheets, env);
 		} else {
 			await sendUpcomingLessonReminders(sheets, env);
 		}

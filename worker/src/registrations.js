@@ -48,7 +48,8 @@ export async function runSubmitRegistration(sheets, env, memberId, eventId, cust
 		是否付費: '否',
 		金額: price,
 		// 活動如果有設定自訂報名欄位（下拉選單/checkbox/留言），答案存成 JSON 字串；沒填就存空字串
-		自訂欄位回覆: customFieldAnswers && Object.keys(customFieldAnswers).length > 0 ? JSON.stringify(customFieldAnswers) : ''
+		自訂欄位回覆: customFieldAnswers && Object.keys(customFieldAnswers).length > 0 ? JSON.stringify(customFieldAnswers) : '',
+		已提醒: '否'
 	});
 
 	// 用實際算出來的總額判斷要不要留消費紀錄，不能只看活動本身是否付費——
@@ -137,6 +138,36 @@ export async function getEventRegistrationsForAdmin(sheets, auth, eventId) {
 		r['佔用名額類別名稱'] = grade ? grade['會員等級名稱'] : r['佔用名額類別'];
 		return r;
 	}));
+}
+
+// 給 scheduled cron 呼叫：檢查明天要舉行、還沒提醒過的活動，推播提醒給每一位已報名的會員
+export async function sendUpcomingEventReminders(sheets, env) {
+	const tomorrow = new Date(todayAtMidnight().getTime() + 86400000);
+	const tomorrowDateStr = toTaipeiDateString(tomorrow);
+
+	const events = await sheets.getSheetAsObjects('Events');
+	const upcomingEvents = events.filter((e) => e['活動日期'] && toTaipeiDateString(new Date(e['活動日期'])) === tomorrowDateStr);
+	if (upcomingEvents.length === 0) return;
+
+	const registrations = await sheets.getSheetAsObjects('Registrations');
+	for (const event of upcomingEvents) {
+		const due = registrations.filter((r) => r['活動ID'] === event['活動ID'] && r['已提醒'] !== '是');
+		for (const registration of due) {
+			const member = await findMemberById(sheets, registration['會員ID']);
+			if (member) {
+				try {
+					await pushMessageToUser(env, member['LINE userId'],
+						'⏰ 活動提醒\n活動：' + event['活動名稱'] + '\n時間：明天' +
+						(event['開始時間'] ? ' ' + event['開始時間'] : '') +
+						(event['活動地點'] ? '\n地點：' + event['活動地點'] : ''));
+				} catch (err) {
+					console.log('活動提醒推播失敗：', err.message);
+				}
+			}
+			// 不管有沒有找到會員資料都要標記已提醒，避免孤兒報名紀錄每天卡在這裡重複嘗試
+			await sheets.updateRowFromObject('Registrations', registration._rowNumber, { 已提醒: '是' });
+		}
+	}
 }
 
 export async function updateRegistrationPayment(sheets, auth, registrationId, isPaid) {
