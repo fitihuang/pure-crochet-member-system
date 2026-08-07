@@ -394,7 +394,7 @@
 			showError('LIFF 初始化失敗：' + err);
 		});
 
-		// 還沒登入的新訪客、還是登入後找不到對應會員資料（needBinding）都會看到這個畫面
+		// 還沒登入 LIFF 的訪客看到的畫面（登入後找不到對應會員資料是另一個畫面，見 renderNeedBindingScreen）
 		function showLoginScreen() {
 			showApp('' +
 				'<div class="card">' +
@@ -423,7 +423,7 @@
 
 		function renderProfile(profile, events, settings) {
 			if (profile.needBinding) {
-				showLoginScreen();
+				renderNeedBindingScreen();
 				return;
 			}
 			if (profile.pendingReview) {
@@ -876,6 +876,19 @@
 			});
 		}
 
+		// 已經登入 LIFF，但查無對應會員資料（例如換過 LINE 登入頻道、或本來就不是會員）
+		// 跟還沒登入時的 showLoginScreen 是兩個不同畫面，不然使用者會誤以為「登入沒有生效」一直卡在原地
+		function renderNeedBindingScreen() {
+			showApp('' +
+				'<div class="card" style="text-align:center;">' +
+				'<h2>找不到會員資料</h2>' +
+				'<p style="font-size:14px;color:#8c8378;">這組 LINE 帳號目前還不是本系統的會員。</p>' +
+				'<p style="font-size:13px;margin-top:16px;">還不是會員嗎？<a href="#" onclick="renderApplyForm();return false;">填資料申請加入</a></p>' +
+				'<button class="secondaryButton" style="margin-top:12px;" onclick="logout()">登出（換一個 LINE 帳號）</button>' +
+				'</div>'
+			);
+		}
+
 		function renderApplyForm() {
 			showApp('' +
 				'<div class="card">' +
@@ -888,7 +901,7 @@
 				'<span class="fieldLabel">Email</span>' +
 				'<input id="applyEmailInput" type="text">' +
 				'<button onclick="submitApplication()">送出申請</button>' +
-				'<p style="margin-top:16px;font-size:13px;"><a href="#" onclick="showLoginScreen();return false;">← 我已經是會員了，返回綁定</a></p>' +
+				'<p style="margin-top:16px;font-size:13px;"><a href="#" onclick="' + (idToken ? 'renderNeedBindingScreen' : 'showLoginScreen') + '();return false;">← 我已經是會員了，返回綁定</a></p>' +
 				'</div>'
 			);
 		}
