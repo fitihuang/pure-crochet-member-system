@@ -399,9 +399,11 @@
 			showApp('' +
 				'<div class="card">' +
 				'<h2 style="text-align:center;">Pure Crochet 會員系統</h2>' +
-				'<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;">' +
+				'<h3 style="margin-top:16px;">已是會員</h3>' +
+				'<hr style="border:none;border-top:1px solid #f0e8dd;margin:10px 0 16px;">' +
+				'<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
 				'<div style="flex:1;min-width:200px;">' +
-				'<span class="fieldLabel" style="font-size:12px;color:#a89a8a;">已是會員，第一次使用會員系統</span>' +
+				'<span class="fieldLabel" style="font-size:12px;color:#a89a8a;">第一次使用會員系統</span>' +
 				'<p style="font-size:13px;color:#8c8378;margin-top:4px;">請輸入你在會員資料留的手機或 Email：</p>' +
 				'<input id="bindInput" type="text" placeholder="手機或 Email">' +
 				'<button onclick="submitBinding()" style="display:block;margin:0 auto;">確認綁定</button>' +
@@ -522,6 +524,7 @@
 				return '' +
 					'<div class="listItem">' + r['活動名稱'] + paidTag + '<br>' +
 					'活動時間：' + formatDate(r['活動日期']) + '　報名時間：' + formatDate(r['報名時間']) +
+					(r['金額'] > 0 ? '　應繳金額：$' + r['金額'] : '') +
 					'</div>';
 			}).join('');
 
