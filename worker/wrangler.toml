@@ -7,6 +7,7 @@ binding = "IMAGES_BUCKET"
 bucket_name = "pure-crochet-images"
 
 [triggers]
-# cron 是 UTC 時間，18:00 UTC = 台北時間隔天凌晨 2 點，對應原本 Apps Script 的每日排程時間；
+# cron 是 UTC 時間：18:00 UTC = 台北時間隔天凌晨 2 點，對應原本 Apps Script 的每日排程時間；
+# 1:00 UTC = 台北時間上午 9 點，活動前一天提醒要在使用者活動時間發送，不能用凌晨那組；
 # 另一組每 15 分鐘跑一次，用來檢查即將開始的一對一課程要不要提醒負責人
-crons = ["0 18 * * *", "*/15 * * * *"]
+crons = ["0 18 * * *", "*/15 * * * *", "0 1 * * *"]

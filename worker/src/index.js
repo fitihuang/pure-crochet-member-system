@@ -66,13 +66,14 @@ export default {
 		}
 	},
 
-	// wrangler.toml 的 [triggers] 設定了兩組 cron，這裡依觸發的是哪一組分流：
-	// 每日一次的對應原本 Apps Script 的 dailyMaintenance，順便檢查明天的活動要不要提醒報名者；
-	// 高頻率那組是一對一課前提醒檢查（需要分鐘級的精準度，不能等每日排程）
+	// wrangler.toml 的 [triggers] 設定了三組 cron，這裡依觸發的是哪一組分流：
+	// 凌晨那組對應原本 Apps Script 的 dailyMaintenance；上午 9 點那組是活動前一天提醒報名者
+	// （特地跟凌晨那組分開，不然使用者半夜收到通知很奇怪）；高頻率那組是一對一課前提醒檢查
 	async scheduled(event, env) {
 		const sheets = createSheetsClient(env);
 		if (event.cron === '0 18 * * *') {
 			await runMemberUpgradeCheck(sheets);
+		} else if (event.cron === '0 1 * * *') {
 			await sendUpcomingEventReminders(sheets, env);
 		} else {
 			await sendUpcomingLessonReminders(sheets, env);
