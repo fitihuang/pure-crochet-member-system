@@ -596,18 +596,47 @@
 			}).join('');
 		}
 
-		// 每個選項各自獨立一列：名稱＋加價金額，不是每個選項都會加價，金額留空/0 就是不加價
+		// 每個選項各自獨立一列：名稱＋加價金額＋參考圖片（選填），不是每個選項都會加價/有圖，留空就是沒有
 		function renderEventCustomFieldOptionsEditor(fieldIndex, options) {
 			var rows = options.map(function (opt, optIndex) {
 				return '' +
 					'<div class="formRow">' +
 					'<div><span class="fieldLabel">選項名稱</span><input value="' + (opt.label || '') + '" onchange="updateEventCustomFieldOptionLabel(' + fieldIndex + ',' + optIndex + ', this.value)"></div>' +
 					'<div style="max-width:120px;"><span class="fieldLabel">加價金額</span><input type="number" value="' + (opt.price || 0) + '" onchange="updateEventCustomFieldOptionPrice(' + fieldIndex + ',' + optIndex + ', this.value)"></div>' +
+					'<div style="max-width:140px;"><span class="fieldLabel">參考圖片（選填）</span>' +
+					(opt.imageUrl ? '<img src="' + opt.imageUrl + '" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:4px;">' : '') +
+					'<input type="file" accept="image/*" onchange="uploadEventCustomFieldOptionImage(' + fieldIndex + ',' + optIndex + ', this)">' +
+					(opt.imageUrl ? '<button type="button" class="secondaryButton smallButton" onclick="removeEventCustomFieldOptionImage(' + fieldIndex + ',' + optIndex + ')">移除圖片</button>' : '') +
+					'</div>' +
 					'<button type="button" class="dangerButton smallButton" style="align-self:flex-start;margin-top:18px;" onclick="removeEventCustomFieldOption(' + fieldIndex + ',' + optIndex + ')">刪除</button>' +
 					'</div>';
 			}).join('');
 			return '<span class="fieldLabel">選項</span>' + rows +
 				'<button type="button" class="secondaryButton smallButton" onclick="addEventCustomFieldOption(' + fieldIndex + ')">＋ 新增選項</button>';
+		}
+
+		// 跟活動封面圖用同一支上傳 API，選項圖片單純是給報名者參考用（例如顏色/款式範例），上傳完直接存網址到這個選項上
+		function uploadEventCustomFieldOptionImage(fieldIndex, optionIndex, fileInput) {
+			var file = fileInput.files[0];
+			if (!file) return;
+
+			var reader = new FileReader();
+			reader.onload = function () {
+				callApi('uploadImage', { idToken: idToken, base64Image: reader.result })
+					.then(function (result) {
+						currentEventCustomFields[fieldIndex].options[optionIndex].imageUrl = result.url;
+						document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
+					})
+					.catch(function (err) {
+						appAlert('圖片上傳失敗：' + err.message);
+					});
+			};
+			reader.readAsDataURL(file);
+		}
+
+		function removeEventCustomFieldOptionImage(fieldIndex, optionIndex) {
+			currentEventCustomFields[fieldIndex].options[optionIndex].imageUrl = '';
+			document.getElementById('eventCustomFieldsArea').innerHTML = renderEventCustomFieldsEditor();
 		}
 
 		function addEventCustomField() {

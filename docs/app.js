@@ -166,9 +166,30 @@ function parseEventCustomFields(rawJson) {
 	}
 }
 
-// 選項現在是 {label, price} 物件（price 選填，沒填就是 0，不影響金額）；這裡統一補一個顯示用的加價說明
+// 選項現在是 {label, price, imageUrl} 物件（price、imageUrl 都選填）；這裡統一補一個顯示用的加價說明
 function formatOptionPriceHint(price) {
 	return price ? '（+$' + price + '）' : '';
+}
+
+// 只要有任一選項帶了參考圖片，就不能用原生 <select>／純文字 checkbox 呈現（<option> 沒辦法放圖片），
+// 要改成圖卡式的 radio/checkbox 版面
+function fieldHasOptionImages(field) {
+	return (field.options || []).some(function (opt) { return opt.imageUrl; });
+}
+
+// 圖卡式選項版面：select 用 radio（單選同一個 name）、checkbox 用 checkbox（可複選），圖片放在文字上方
+function buildOptionImageCardsHtml(field, index, inputType) {
+	var groupName = 'customFieldGroup_' + index;
+	var cards = (field.options || []).map(function (opt, optIndex) {
+		return '' +
+			'<label style="border:1px solid #e0d8cc;border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;text-align:center;cursor:pointer;">' +
+			(opt.imageUrl ? '<img src="' + opt.imageUrl + '" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;">' : '') +
+			'<span>' + opt.label + formatOptionPriceHint(opt.price) + '</span>' +
+			'<input type="' + inputType + '"' + (inputType === 'radio' ? ' name="' + groupName + '"' : '') +
+			' id="customField_' + index + '_' + optIndex + '" onchange="updateCustomFieldsEstimate()" style="width:auto;margin:0;">' +
+			'</label>';
+	}).join('');
+	return '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">' + cards + '</div>';
 }
 
 // 組出報名表單裡自訂欄位的 HTML，select 是單選、checkbox 是可複選、text 是自由留言；
@@ -177,12 +198,18 @@ function buildCustomFieldsFormHtml(fields) {
 	var html = fields.map(function (field, index) {
 		var labelHtml = '<div style="margin-bottom:14px;"><span class="fieldLabel" style="font-size:12px;color:#a89a8a;">' + field.label + '</span>';
 		if (field.type === 'select') {
+			if (fieldHasOptionImages(field)) {
+				return labelHtml + buildOptionImageCardsHtml(field, index, 'radio') + '</div>';
+			}
 			var options = '<option value="">請選擇</option>' + (field.options || []).map(function (opt) {
 				return '<option value="' + opt.label + '">' + opt.label + formatOptionPriceHint(opt.price) + '</option>';
 			}).join('');
 			return labelHtml + '<select id="customField_' + index + '" onchange="updateCustomFieldsEstimate()" style="width:100%;padding:10px;font-size:14px;border:1px solid #e0d8cc;border-radius:10px;font-family:inherit;background:#fff;">' + options + '</select></div>';
 		}
 		if (field.type === 'checkbox') {
+			if (fieldHasOptionImages(field)) {
+				return labelHtml + buildOptionImageCardsHtml(field, index, 'checkbox') + '</div>';
+			}
 			var checkboxes = (field.options || []).map(function (opt, optIndex) {
 				return '<label style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:14px;">' +
 					'<input type="checkbox" id="customField_' + index + '_' + optIndex + '" onchange="updateCustomFieldsEstimate()" style="width:auto;margin:0;">' + opt.label + formatOptionPriceHint(opt.price) + '</label>';
@@ -203,11 +230,12 @@ function updateCustomFieldsEstimate() {
 	if (!el) return;
 	var total = 0;
 	activeCustomFieldsForEstimate.forEach(function (field, index) {
-		if (field.type === 'select') {
+		if (field.type === 'select' && !fieldHasOptionImages(field)) {
 			var select = document.getElementById('customField_' + index);
 			var chosen = (field.options || []).filter(function (opt) { return select && opt.label === select.value; })[0];
 			if (chosen) total += Number(chosen.price) || 0;
-		} else if (field.type === 'checkbox') {
+		} else if (field.type === 'checkbox' || (field.type === 'select' && fieldHasOptionImages(field))) {
+			// checkbox 跟「圖卡式單選」都是各自獨立的 input，一律用 checked 狀態加總
 			(field.options || []).forEach(function (opt, optIndex) {
 				var box = document.getElementById('customField_' + index + '_' + optIndex);
 				if (box && box.checked) total += Number(opt.price) || 0;
@@ -227,6 +255,13 @@ function collectCustomFieldAnswers(fields) {
 				return el && el.checked;
 			}).map(function (opt) { return opt.label; });
 			if (checked.length > 0) answers[field.label] = checked;
+		} else if (field.type === 'select' && fieldHasOptionImages(field)) {
+			// 圖卡式單選是一組各自獨立的 radio，不是原生 <select>，要逐一找出被選中的那個
+			var picked = (field.options || []).filter(function (opt, optIndex) {
+				var el = document.getElementById('customField_' + index + '_' + optIndex);
+				return el && el.checked;
+			})[0];
+			if (picked) answers[field.label] = picked.label;
 		} else {
 			var el = document.getElementById('customField_' + index);
 			if (el && el.value) answers[field.label] = el.value;
