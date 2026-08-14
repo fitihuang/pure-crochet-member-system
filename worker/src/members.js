@@ -1,4 +1,4 @@
-import { getGradeById } from './grades.js';
+import { getGradeById, getGradeIdByName } from './grades.js';
 import { findEventById } from './events.js';
 import { pushMessageToAdmin } from './lineMessaging.js';
 
@@ -121,6 +121,30 @@ export async function runMemberUpgradeCheck(sheets) {
 	for (const member of members) {
 		const paidCount = await countPaidRegistrations(sheets, member['會員ID']);
 		await sheets.updateRowFromObject('Members', member._rowNumber, { 累積付費活動次數: paidCount });
+	}
+}
+
+// 金牌會員在「金牌會員期間」報名的付費活動累積滿3筆，自動升等榮譽會員；
+// 用「報名時等級snapshot」而不是累積付費活動次數，才不會把當一般會員時期繳的費也算進去。
+// 只處理「金牌→榮譽」這個單一方向，其他等級異動仍然全部人工決定，不會互相影響
+export async function checkHonorMemberUpgrades(sheets) {
+	const vipGradeId = await getGradeIdByName(sheets, '金牌會員');
+	const honorGradeId = await getGradeIdByName(sheets, '榮譽會員');
+	if (!vipGradeId || !honorGradeId) return;
+
+	const members = await sheets.getSheetAsObjects('Members');
+	const registrations = await sheets.getSheetAsObjects('Registrations');
+
+	for (const member of members) {
+		if (member['會員等級ID'] !== vipGradeId) continue;
+
+		const qualifyingCount = registrations.filter((r) =>
+			r['會員ID'] === member['會員ID'] && r['報名時等級snapshot'] === vipGradeId && r['是否付費'] === '是'
+		).length;
+
+		if (qualifyingCount >= 3) {
+			await sheets.updateRowFromObject('Members', member._rowNumber, { 會員等級ID: honorGradeId });
+		}
 	}
 }
 

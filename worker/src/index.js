@@ -3,7 +3,8 @@ import { createSheetsClient } from './sheetsApi.js';
 import { getGradeList } from './grades.js';
 import {
 	getMemberProfile, getAllMembers, createMember, updateMember,
-	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication
+	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication,
+	checkHonorMemberUpgrades
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
 import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment, sendUpcomingEventReminders, deleteRegistration } from './registrations.js';
@@ -73,6 +74,7 @@ export default {
 		const sheets = createSheetsClient(env);
 		if (event.cron === '0 18 * * *') {
 			await runMemberUpgradeCheck(sheets);
+			await checkHonorMemberUpgrades(sheets);
 		} else if (event.cron === '0 1 * * *') {
 			await sendUpcomingEventReminders(sheets, env);
 		} else {

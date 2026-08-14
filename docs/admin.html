@@ -552,6 +552,7 @@
 				'<div class="formRow">' +
 				'<div><span class="fieldLabel">一般會員費用</span><input id="eventFeeGeneralInput" type="number" value="' + (isEdit ? event['一般會員費用'] : '0') + '"></div>' +
 				'<div><span class="fieldLabel">金牌會員費用</span><input id="eventFeeGoldInput" type="number" value="' + (isEdit ? event['金牌會員費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">榮譽會員費用</span><input id="eventFeeHonorInput" type="number" value="' + (isEdit ? event['榮譽會員費用'] : '0') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
 				'<div><span class="fieldLabel">活動地點</span><input id="eventLocationInput" value="' + (isEdit ? (event['活動地點'] || '') : '') + '"></div>' +
@@ -753,6 +754,7 @@
 				'是否付費': document.getElementById('eventIsPaidInput').value,
 				'一般會員費用': Number(document.getElementById('eventFeeGeneralInput').value),
 				'金牌會員費用': Number(document.getElementById('eventFeeGoldInput').value),
+				'榮譽會員費用': Number(document.getElementById('eventFeeHonorInput').value),
 				'狀態': document.getElementById('eventStatusInput').value,
 				'活動大綱': document.getElementById('eventOutlineInput').value,
 				'活動內容': document.getElementById('eventDescriptionInput').value,

@@ -146,10 +146,13 @@ export async function deleteEvent(sheets, env, auth, eventId) {
 	return { success: true };
 }
 
-// 金牌會員跟一般會員是兩個不同價格欄位，依報名者當下的等級決定要用哪一個
+// 金牌／榮譽／一般會員各自是不同價格欄位，依報名者當下的等級決定要用哪一個
 export async function getEventPriceForGrade(sheets, event, gradeId) {
 	const vipGradeId = await getGradeIdByName(sheets, '金牌會員');
-	return gradeId === vipGradeId ? event['金牌會員費用'] : event['一般會員費用'];
+	const honorGradeId = await getGradeIdByName(sheets, '榮譽會員');
+	if (gradeId === vipGradeId) return event['金牌會員費用'];
+	if (gradeId === honorGradeId) return event['榮譽會員費用'];
+	return event['一般會員費用'];
 }
 
 export async function findEventById(sheets, eventId) {
