@@ -6,7 +6,7 @@ import {
 	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
-import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment, sendUpcomingEventReminders } from './registrations.js';
+import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment, sendUpcomingEventReminders, deleteRegistration } from './registrations.js';
 import { getSettings, updateSettings } from './settings.js';
 import { uploadImageToR2 } from './imageUpload.js';
 import {
@@ -25,7 +25,7 @@ const AUTH_REQUIRED_ACTIONS = new Set([
 	'getMemberProfile', 'getAllMembers', 'createMember', 'updateMember',
 	'applyForMembership', 'rejectMemberApplication',
 	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
-	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'checkAllMembersUpgrade',
+	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'deleteRegistration', 'checkAllMembersUpgrade',
 	'uploadImage', 'getAvailableLessonSlots', 'bookLesson', 'cancelLesson',
 	'getAllLessonsForAdmin', 'createLessonForMember', 'updateLessonTime', 'updateSettings'
 ]);
@@ -128,6 +128,8 @@ async function handleApiRequest(env, params) {
 			return getEventRegistrationsForAdmin(sheets, auth, params.eventId);
 		case 'updateRegistrationPayment':
 			return updateRegistrationPayment(sheets, auth, params.registrationId, params.isPaid);
+		case 'deleteRegistration':
+			return deleteRegistration(sheets, auth, params.registrationId);
 		case 'checkAllMembersUpgrade':
 			return checkAllMembersUpgrade(sheets, auth);
 		case 'getGradeList':

@@ -180,3 +180,22 @@ export async function updateRegistrationPayment(sheets, auth, registrationId, is
 	await sheets.updateRowFromObject('Registrations', registration._rowNumber, { 是否付費: isPaid ? '是' : '否' });
 	return { success: true };
 }
+
+// 管理員手動移除某筆報名（例如報名者要求取消、或報錯名），釋出的名額靠即時算剩餘名額自動反映，不用另外處理
+export async function deleteRegistration(sheets, auth, registrationId) {
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	const registrations = await sheets.getSheetAsObjects('Registrations');
+	const registration = registrations.find((r) => r['報名ID'] === registrationId);
+	if (!registration) throw new Error('找不到報名紀錄');
+
+	// 一併清掉關聯的消費紀錄，不然會留下一筆對不到報名紀錄的孤兒消費資料
+	const purchases = await sheets.getSheetAsObjects('Purchases');
+	const relatedPurchase = purchases.find((p) => p['關聯報名ID'] === registrationId);
+	if (relatedPurchase) {
+		await sheets.deleteRow('Purchases', relatedPurchase._rowNumber);
+	}
+
+	await sheets.deleteRow('Registrations', registration._rowNumber);
+	return { success: true };
+}

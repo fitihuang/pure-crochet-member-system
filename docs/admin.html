@@ -1009,6 +1009,7 @@
 						'<button class="secondaryButton smallButton" onclick="togglePayment(\'' + eventId + '\', \'' + r['報名ID'] + '\', ' + (r['是否付費'] !== '是') + ')">' +
 						(r['是否付費'] === '是' ? '標記未付費' : '標記已付費') +
 						'</button>' +
+						'<button class="dangerButton smallButton" onclick="deleteRegistrationHandler(\'' + eventId + '\', \'' + r['報名ID'] + '\')">刪除</button>' +
 						'</div>' +
 						'</div>';
 				}).join('');
@@ -1030,6 +1031,23 @@
 					hideLockOverlay();
 					appAlert(err.message);
 				});
+		}
+
+		// 刪除是不可逆操作（連帶清掉關聯的消費紀錄），先跟管理員確認一次避免手滑誤刪
+		function deleteRegistrationHandler(eventId, registrationId) {
+			appConfirm('確定要刪除這筆報名紀錄嗎？如果有對應的消費紀錄也會一併刪除，這個動作無法復原。').then(function (ok) {
+				if (!ok) return;
+				showLockOverlay('刪除中...');
+				callApi('deleteRegistration', { idToken: idToken, registrationId: registrationId })
+					.then(function () {
+						hideLockOverlay();
+						viewRegistrations(eventId);
+					})
+					.catch(function (err) {
+						hideLockOverlay();
+						appAlert(err.message);
+					});
+			});
 		}
 
 		function closeRegistrations() {
