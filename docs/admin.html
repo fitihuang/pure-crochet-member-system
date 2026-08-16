@@ -339,8 +339,6 @@
 				'<div class="card" id="memberSection">' +
 				'<h2>會員管理</h2>' +
 				'<button class="secondaryButton smallButton" onclick="runUpgradeCheck()">重新計算付費次數</button>' +
-				'<h3 style="margin-top:14px;">待審核的新會員申請</h3>' +
-				'<div id="pendingMemberArea">' + renderPendingMemberList() + '</div>' +
 				'<div id="memberFormArea">' + renderMemberForm(null) + '</div>' +
 				'<div id="memberListArea">' + renderMemberList() + '</div>' +
 				'</div>' +
@@ -440,11 +438,9 @@
 			});
 		}
 
-		// 待審核的申請不算正式會員，這裡不重複列出，只在上面的「待審核」區塊處理
 		function renderMemberList() {
-			var members = memberList.filter(function (m) { return m['審核狀態'] !== '待審核'; });
-			if (members.length === 0) return '<p>目前沒有會員資料</p>';
-			return members.map(function (m) {
+			if (memberList.length === 0) return '<p>目前沒有會員資料</p>';
+			return memberList.map(function (m) {
 				var grade = gradeList.filter(function (g) { return g['會員等級ID'] === m['會員等級ID']; })[0];
 				var gradeName = grade ? grade['會員等級名稱'] : m['會員等級ID'];
 				return '' +
@@ -456,60 +452,6 @@
 					'<div class="listRowActions"><button class="secondaryButton smallButton" onclick="editMember(\'' + m['會員ID'] + '\')">編輯</button></div>' +
 					'</div>';
 			}).join('');
-		}
-
-		function renderPendingMemberList() {
-			var pending = memberList.filter(function (m) { return m['審核狀態'] === '待審核'; });
-			if (pending.length === 0) return '<p style="font-size:13px;color:#8c8378;">目前沒有待審核的申請</p>';
-			return pending.map(function (m) {
-				return '' +
-					'<div class="listRow">' +
-					'<div class="listRowInfo">' + m['姓名'] + '<span class="tagSmall">待審核</span><br>' +
-					'<span style="color:#8c8378;font-size:12px;">' + (m['手機'] || m['Email'] || '') + '</span>' +
-					'</div>' +
-					'<div class="listRowActions">' +
-					'<button class="smallButton" onclick="approveMemberApplication(\'' + m['會員ID'] + '\')">核准</button>' +
-					'<button class="dangerButton smallButton" onclick="rejectMemberApplicationHandler(\'' + m['會員ID'] + '\')">拒絕</button>' +
-					'</div>' +
-					'</div>';
-			}).join('');
-		}
-
-		// 核准就只是清掉「審核狀態」，等級/一對一資格這些細節維持空白，負責人要另外設定的話直接用下面「編輯」就好
-		function approveMemberApplication(memberId) {
-			showLockOverlay('核准中...');
-			callApi('updateMember', { idToken: idToken, memberId: memberId, memberData: { '審核狀態': '' } })
-				.then(function () {
-					return callApi('getAllMembers', { idToken: idToken });
-				}).then(function (members) {
-					memberList = members;
-					document.getElementById('pendingMemberArea').innerHTML = renderPendingMemberList();
-					document.getElementById('memberListArea').innerHTML = renderMemberList();
-					hideLockOverlay();
-				}).catch(function (err) {
-					hideLockOverlay();
-					appAlert(err.message);
-				});
-		}
-
-		// 拒絕就直接刪掉這筆待審核資料（不是正式會員，沒有報名/預約等關聯資料要顧慮），對方之後還是可以重新申請
-		function rejectMemberApplicationHandler(memberId) {
-			appConfirm('確定要拒絕這筆申請嗎？資料會直接刪除，之後對方還是可以重新申請。').then(function (ok) {
-				if (!ok) return;
-				showLockOverlay('處理中...');
-				callApi('rejectMemberApplication', { idToken: idToken, memberId: memberId })
-					.then(function () {
-						return callApi('getAllMembers', { idToken: idToken });
-					}).then(function (members) {
-						memberList = members;
-						document.getElementById('pendingMemberArea').innerHTML = renderPendingMemberList();
-						document.getElementById('memberListArea').innerHTML = renderMemberList();
-						hideLockOverlay();
-					}).catch(function (err) {
-						hideLockOverlay();
-						appAlert(err.message);
-					});
-			});
 		}
 
 		// ---------- 活動管理 ----------

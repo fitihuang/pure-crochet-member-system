@@ -384,10 +384,6 @@
 				renderNeedBindingScreen();
 				return;
 			}
-			if (profile.pendingReview) {
-				renderPendingReviewScreen();
-				return;
-			}
 
 			document.getElementById('logoutBtn').style.display = 'inline-block';
 			var registeredEventIds = (profile.registrations || []).map(function (r) { return r['活動ID']; });
@@ -792,7 +788,7 @@
 			showApp('' +
 				'<div class="card">' +
 				'<h2>申請加入會員</h2>' +
-				'<p>填寫資料送出後，需要等負責人審核通過才能使用會員功能。</p>' +
+				'<p>填寫資料送出後即可開始使用會員功能。</p>' +
 				'<span class="fieldLabel">姓名</span>' +
 				'<input id="applyNameInput" type="text">' +
 				'<span class="fieldLabel">手機</span>' +
@@ -822,16 +818,6 @@
 					hideLockOverlay();
 					appAlert(err.message);
 				});
-		}
-
-		function renderPendingReviewScreen() {
-			showApp('' +
-				'<div class="card" style="text-align:center;">' +
-				'<h2>申請審核中</h2>' +
-				'<p>你的會員申請已經送出，等負責人審核通過後就能使用會員功能，請耐心等候。</p>' +
-				'<button class="secondaryButton" onclick="logout()">登出</button>' +
-				'</div>'
-			);
 		}
 
 		function renderAdminCard() {

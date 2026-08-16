@@ -3,7 +3,7 @@ import { createSheetsClient } from './sheetsApi.js';
 import { getGradeList } from './grades.js';
 import {
 	getMemberProfile, getAllMembers, createMember, updateMember,
-	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership, rejectMemberApplication,
+	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership,
 	checkHonorMemberUpgrades
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
@@ -24,7 +24,7 @@ const CORS_HEADERS = {
 // 需要登入身份的 action，統一在分派前驗證一次，業務邏輯函式就不用各自重打一次 LINE API
 const AUTH_REQUIRED_ACTIONS = new Set([
 	'getMemberProfile', 'getAllMembers', 'createMember', 'updateMember',
-	'applyForMembership', 'rejectMemberApplication',
+	'applyForMembership',
 	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
 	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'deleteRegistration', 'checkAllMembersUpgrade',
 	'uploadImage', 'getAvailableLessonSlots', 'bookLesson', 'cancelLesson',
@@ -96,16 +96,14 @@ async function handleApiRequest(env, params) {
 	switch (action) {
 		case 'getMemberProfile': {
 			const profile = await getMemberProfile(sheets, auth);
-			// 還沒綁定或審核中都還不是正式會員，不用管一對一預約資訊
-			if (!profile.needBinding && !profile.pendingReview) {
+			// 還沒綁定就還不是正式會員，不用管一對一預約資訊
+			if (!profile.needBinding) {
 				Object.assign(profile, await getLessonBookingInfo(sheets, auth));
 			}
 			return profile;
 		}
 		case 'applyForMembership':
 			return applyForMembership(sheets, env, auth, params.memberData);
-		case 'rejectMemberApplication':
-			return rejectMemberApplication(sheets, auth, params.memberId);
 		case 'getAllMembers':
 			return getAllMembers(sheets, auth);
 		case 'createMember':
