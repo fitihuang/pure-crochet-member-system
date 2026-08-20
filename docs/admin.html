@@ -459,62 +459,67 @@
 		// 編輯活動表單時，暫存目前正在編輯的自訂報名欄位設定（存 Sheet 前才序列化成 JSON）
 		var currentEventCustomFields = [];
 
-		function renderEventForm(event) {
-			var isEdit = !!event;
-			currentEventCustomFields = isEdit ? parseEventCustomFields(event['自訂欄位設定']) : [];
+		// event 有值但 forceNew 為 true 時是「複製活動」：欄位都預先帶入 event 的值，
+		// 但存檔時當成新活動處理（saveEvent(null)），不會動到原本那筆
+		function renderEventForm(event, forceNew) {
+			var isEdit = !!event && !forceNew;
+			var hasSource = !!event;
+			currentEventCustomFields = hasSource ? parseEventCustomFields(event['自訂欄位設定']) : [];
+			var titleText = isEdit ? '編輯活動：' + event['活動名稱']
+				: (hasSource ? '新增活動（複製自「' + event['活動名稱'] + '」）' : '新增活動');
 			return '' +
 				'<div class="formBox">' +
-				'<h3>' + (isEdit ? '編輯活動：' + event['活動名稱'] : '新增活動') + '</h3>' +
+				'<h3>' + titleText + '</h3>' +
 				'<span class="fieldLabel">活動名稱</span>' +
-				'<input id="eventNameInput" value="' + (isEdit ? event['活動名稱'] : '') + '">' +
+				'<input id="eventNameInput" value="' + (hasSource ? event['活動名稱'] : '') + '">' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">活動日期</span><input id="eventDateInput" type="date" value="' + (isEdit ? toDateInputValue(event['活動日期']) : '') + '"></div>' +
-				'<div><span class="fieldLabel">報名截止日</span><input id="eventDeadlineInput" type="date" value="' + (isEdit ? toDateInputValue(event['報名截止日']) : '') + '"></div>' +
+				'<div><span class="fieldLabel">活動日期</span><input id="eventDateInput" type="date" value="' + (hasSource ? toDateInputValue(event['活動日期']) : '') + '"></div>' +
+				'<div><span class="fieldLabel">報名截止日</span><input id="eventDeadlineInput" type="date" value="' + (hasSource ? toDateInputValue(event['報名截止日']) : '') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">開始時間</span><input id="eventStartTimeInput" type="time" value="' + (isEdit ? (event['開始時間'] || '') : '') + '"></div>' +
-				'<div><span class="fieldLabel">結束時間</span><input id="eventEndTimeInput" type="time" value="' + (isEdit ? (event['結束時間'] || '') : '') + '"></div>' +
+				'<div><span class="fieldLabel">開始時間</span><input id="eventStartTimeInput" type="time" value="' + (hasSource ? (event['開始時間'] || '') : '') + '"></div>' +
+				'<div><span class="fieldLabel">結束時間</span><input id="eventEndTimeInput" type="time" value="' + (hasSource ? (event['結束時間'] || '') : '') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">總名額</span><input id="eventTotalQuotaInput" type="number" value="' + (isEdit ? event['總名額'] : '30') + '"></div>' +
-				'<div><span class="fieldLabel">VIP保留名額</span><input id="eventVipQuotaInput" type="number" value="' + (isEdit ? event['VIP保留名額'] : '10') + '"></div>' +
-				'<div><span class="fieldLabel">一般名額</span><input id="eventGeneralQuotaInput" type="number" value="' + (isEdit ? event['一般名額'] : '20') + '"></div>' +
+				'<div><span class="fieldLabel">總名額</span><input id="eventTotalQuotaInput" type="number" value="' + (hasSource ? event['總名額'] : '30') + '"></div>' +
+				'<div><span class="fieldLabel">VIP保留名額</span><input id="eventVipQuotaInput" type="number" value="' + (hasSource ? event['VIP保留名額'] : '10') + '"></div>' +
+				'<div><span class="fieldLabel">一般名額</span><input id="eventGeneralQuotaInput" type="number" value="' + (hasSource ? event['一般名額'] : '20') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
 				'<div><span class="fieldLabel">是否付費</span><select id="eventIsPaidInput">' +
-				'<option value="是"' + (isEdit && event['是否付費'] === '是' ? ' selected' : '') + '>是</option>' +
-				'<option value="否"' + (isEdit && event['是否付費'] === '否' ? ' selected' : '') + '>否</option>' +
+				'<option value="是"' + (hasSource && event['是否付費'] === '是' ? ' selected' : '') + '>是</option>' +
+				'<option value="否"' + (hasSource && event['是否付費'] === '否' ? ' selected' : '') + '>否</option>' +
 				'</select></div>' +
 				'<div><span class="fieldLabel">狀態</span><select id="eventStatusInput">' +
 				['開放報名', '已截止', '已額滿'].map(function (s) {
-					return '<option value="' + s + '"' + (isEdit && event['狀態'] === s ? ' selected' : '') + '>' + s + '</option>';
+					return '<option value="' + s + '"' + (hasSource && event['狀態'] === s ? ' selected' : '') + '>' + s + '</option>';
 				}).join('') +
 				'</select></div>' +
 				'</div>' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">一般會員費用</span><input id="eventFeeGeneralInput" type="number" value="' + (isEdit ? event['一般會員費用'] : '0') + '"></div>' +
-				'<div><span class="fieldLabel">金牌會員費用</span><input id="eventFeeGoldInput" type="number" value="' + (isEdit ? event['金牌會員費用'] : '0') + '"></div>' +
-				'<div><span class="fieldLabel">榮譽會員費用</span><input id="eventFeeHonorInput" type="number" value="' + (isEdit ? event['榮譽會員費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">一般會員費用</span><input id="eventFeeGeneralInput" type="number" value="' + (hasSource ? event['一般會員費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">金牌會員費用</span><input id="eventFeeGoldInput" type="number" value="' + (hasSource ? event['金牌會員費用'] : '0') + '"></div>' +
+				'<div><span class="fieldLabel">榮譽會員費用</span><input id="eventFeeHonorInput" type="number" value="' + (hasSource ? event['榮譽會員費用'] : '0') + '"></div>' +
 				'</div>' +
 				'<div class="formRow">' +
-				'<div><span class="fieldLabel">活動地點</span><input id="eventLocationInput" value="' + (isEdit ? (event['活動地點'] || '') : '') + '"></div>' +
-				'<div><span class="fieldLabel">活動地點 Google Maps 網址</span><input id="eventLocationUrlInput" value="' + (isEdit ? (event['活動地點地圖網址'] || '') : '') + '"></div>' +
+				'<div><span class="fieldLabel">活動地點</span><input id="eventLocationInput" value="' + (hasSource ? (event['活動地點'] || '') : '') + '"></div>' +
+				'<div><span class="fieldLabel">活動地點 Google Maps 網址</span><input id="eventLocationUrlInput" value="' + (hasSource ? (event['活動地點地圖網址'] || '') : '') + '"></div>' +
 				'</div>' +
 				'<span class="fieldLabel">活動大綱（顯示在會員頁活動列表）</span>' +
-				'<textarea id="eventOutlineInput">' + (isEdit ? (event['活動大綱'] || '') : '') + '</textarea>' +
+				'<textarea id="eventOutlineInput">' + (hasSource ? (event['活動大綱'] || '') : '') + '</textarea>' +
 				'<span class="fieldLabel">活動內容（活動詳情頁會跟大綱一起顯示）</span>' +
-				'<textarea id="eventDescriptionInput">' + (isEdit ? (event['活動內容'] || '') : '') + '</textarea>' +
+				'<textarea id="eventDescriptionInput">' + (hasSource ? (event['活動內容'] || '') : '') + '</textarea>' +
 				'<div class="formBox">' +
 				'<h3>報名自訂欄位（選填，例如飲料選擇、加購項目、投票留言）</h3>' +
 				'<div id="eventCustomFieldsArea">' + renderEventCustomFieldsEditor() + '</div>' +
 				'<button type="button" class="secondaryButton smallButton" onclick="addEventCustomField()">+ 新增欄位</button>' +
 				'</div>' +
 				'<span class="fieldLabel">活動封面圖片網址</span>' +
-				'<input id="eventImageInput" value="' + (isEdit ? (event['活動封面圖片網址'] || '') : '') + '">' +
+				'<input id="eventImageInput" value="' + (hasSource ? (event['活動封面圖片網址'] || '') : '') + '">' +
 				'<input id="eventImageFileInput" type="file" accept="image/*" onchange="uploadEventImage(this)">' +
 				'<div id="eventImageUploadStatus" style="font-size:12px;color:#8c8378;margin-bottom:8px;"></div>' +
 				'<button onclick="saveEvent(' + (isEdit ? "'" + event['活動ID'] + "'" : 'null') + ')">' + (isEdit ? '儲存變更' : '新增活動') + '</button> ' +
-				(isEdit ? '<button class="secondaryButton" onclick="resetEventForm()">取消編輯</button>' : '') +
+				(hasSource ? '<button class="secondaryButton" onclick="resetEventForm()">取消</button>' : '') +
 				'</div>';
 		}
 
@@ -631,6 +636,15 @@
 			document.getElementById('eventSection').scrollIntoView({ behavior: 'smooth' });
 		}
 
+		// 複製活動：把原活動的欄位帶進表單當草稿，但狀態重設回「開放報名」（不繼承已截止/已額滿），
+		// 存檔時當新活動處理，不會動到原本那筆
+		function copyEvent(eventId) {
+			var source = eventList.filter(function (e) { return e['活動ID'] === eventId; })[0];
+			var draft = Object.assign({}, source, { 狀態: '開放報名' });
+			document.getElementById('eventFormArea').innerHTML = renderEventForm(draft, true);
+			document.getElementById('eventSection').scrollIntoView({ behavior: 'smooth' });
+		}
+
 		// 已有報名紀錄的活動後端會擋掉刪除，這裡先跟使用者確認一次，避免手滑誤刪
 		function deleteEventHandler(eventId) {
 			appConfirm('確定要刪除這個活動嗎？已有報名紀錄的活動無法刪除。').then(function (ok) {
@@ -737,6 +751,7 @@
 					'</div>' +
 					'<div class="listRowActions">' +
 					'<button class="secondaryButton smallButton" onclick="editEvent(\'' + e['活動ID'] + '\')">編輯</button>' +
+					'<button class="secondaryButton smallButton" onclick="copyEvent(\'' + e['活動ID'] + '\')">複製</button>' +
 					'<button class="smallButton" onclick="viewRegistrations(\'' + e['活動ID'] + '\')">報名名單</button>' +
 					(parseEventCustomFields(e['自訂欄位設定']).length > 0
 						? '<a class="linkButton smallButton" style="text-decoration:none;" target="_blank" href="admin-event-stats.html?eventId=' + e['活動ID'] + '">欄位統計</a>'
