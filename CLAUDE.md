@@ -9,6 +9,10 @@
 - 管理後台：https://fitihuang.github.io/pure-crochet-member-system/admin.html
 - 後端 API：https://pure-crochet-backend.pure-crochet.workers.dev（Cloudflare Workers）
 
+## 相關文件
+
+- **`SPEC.md`**：完整系統規格書（架構、7 張 Sheets 的逐欄位規格、全部 API、前端頁面行為、核心業務邏輯、排程任務、外部整合限制、權限模型、已知技術債），從程式碼與正式資料反推而成，**改動系統前建議先看**。這份 `CLAUDE.md` 只放操作慣例跟踩過的坑，細節一律以 `SPEC.md` 為準；改了會影響規格的邏輯記得回來同步更新 `SPEC.md`。
+
 ## 架構
 
 - **前端**：純靜態 HTML/CSS/JS，`docs/` 資料夾（`index.html` 會員頁、`admin.html` 後台、`event.html` 活動詳情、`app.js` 共用函式），GitHub Pages 架站（GitHub 帳號 `fitihuang`，public repo）。
