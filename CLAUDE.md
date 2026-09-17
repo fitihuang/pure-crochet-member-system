@@ -12,6 +12,7 @@
 ## 相關文件
 
 - **`SPEC.md`**：完整系統規格書（架構、7 張 Sheets 的逐欄位規格、全部 API、前端頁面行為、核心業務邏輯、排程任務、外部整合限制、權限模型、已知技術債），從程式碼與正式資料反推而成，**改動系統前建議先看**。這份 `CLAUDE.md` 只放操作慣例跟踩過的坑，細節一律以 `SPEC.md` 為準；改了會影響規格的邏輯記得回來同步更新 `SPEC.md`。
+- `SPEC.md` 同時也發布成一份 Claude Artifact（方便不碰程式碼的人直接看網頁版）：https://claude.ai/artifact/DQtJHKraChPeoJwTMLR4K9 。**`SPEC.md` 內容更新後，記得同步重新發布到這個 Artifact 網址**（用 Artifact 工具的 `publish` 搭配這個 `url` 更新，不要另外開一個新的 Artifact）。
 
 ## 架構
 
