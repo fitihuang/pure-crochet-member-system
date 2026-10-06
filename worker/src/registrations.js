@@ -140,32 +140,44 @@ export async function getEventRegistrationsForAdmin(sheets, auth, eventId) {
 	}));
 }
 
-// 給 scheduled cron 呼叫：檢查明天要舉行、還沒提醒過的活動，推播提醒給每一位已報名的會員
+// 給 scheduled cron 呼叫：推播提醒給「明天或今天」舉行、還沒提醒成功的活動的已報名會員
+// 納入今天是為了讓前一天推播失敗的人當天還有一次補發機會（cron 一天只跑一次，只看明天的話失敗就永遠不會重試）
 export async function sendUpcomingEventReminders(sheets, env) {
-	const tomorrow = new Date(todayAtMidnight().getTime() + 86400000);
-	const tomorrowDateStr = toTaipeiDateString(tomorrow);
+	const today = todayAtMidnight();
+	const todayDateStr = toTaipeiDateString(today);
+	const tomorrowDateStr = toTaipeiDateString(new Date(today.getTime() + 86400000));
 
 	const events = await sheets.getSheetAsObjects('Events');
-	const upcomingEvents = events.filter((e) => e['活動日期'] && toTaipeiDateString(new Date(e['活動日期'])) === tomorrowDateStr);
+	const upcomingEvents = events.filter((e) => {
+		if (!e['活動日期']) return false;
+		const eventDateStr = toTaipeiDateString(new Date(e['活動日期']));
+		return eventDateStr === todayDateStr || eventDateStr === tomorrowDateStr;
+	});
 	if (upcomingEvents.length === 0) return;
 
 	const registrations = await sheets.getSheetAsObjects('Registrations');
 	for (const event of upcomingEvents) {
+		const dayLabel = toTaipeiDateString(new Date(event['活動日期'])) === todayDateStr ? '今天' : '明天';
 		const due = registrations.filter((r) => r['活動ID'] === event['活動ID'] && r['已提醒'] !== '是');
 		for (const registration of due) {
 			const member = await findMemberById(sheets, registration['會員ID']);
+			// 找不到會員（孤兒報名紀錄）沒有人可以推，直接視為處理完，避免每天卡在這裡重複嘗試
+			let delivered = true;
 			if (member) {
 				try {
-					await pushMessageToUser(env, member['LINE userId'],
-						'⏰ 活動提醒\n活動：' + event['活動名稱'] + '\n時間：明天' +
+					delivered = await pushMessageToUser(env, member['LINE userId'],
+						'⏰ 活動提醒\n活動：' + event['活動名稱'] + '\n時間：' + dayLabel +
 						(event['開始時間'] ? ' ' + event['開始時間'] : '') +
 						(event['活動地點'] ? '\n地點：' + event['活動地點'] : ''));
 				} catch (err) {
 					console.log('活動提醒推播失敗：', err.message);
+					delivered = false;
 				}
 			}
-			// 不管有沒有找到會員資料都要標記已提醒，避免孤兒報名紀錄每天卡在這裡重複嘗試
-			await sheets.updateRowFromObject('Registrations', registration._rowNumber, { 已提醒: '是' });
+			// 推播失敗不標記，留給下一次排程重試
+			if (delivered) {
+				await sheets.updateRowFromObject('Registrations', registration._rowNumber, { 已提醒: '是' });
+			}
 		}
 	}
 }
