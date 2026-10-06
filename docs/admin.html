@@ -971,6 +971,7 @@
 						formatCustomFieldAnswersHtml(r['自訂欄位回覆']) +
 						'</div>' +
 						'<div class="listRowActions">' +
+						'<button class="linkButton smallButton" onclick="openRegistrantMessageComposer(\'' + r['報名ID'] + '\')">傳訊息</button>' +
 						'<button class="secondaryButton smallButton" onclick="togglePayment(\'' + eventId + '\', \'' + r['報名ID'] + '\', ' + (r['是否付費'] !== '是') + ')">' +
 						(r['是否付費'] === '是' ? '標記未付費' : '標記已付費') +
 						'</button>' +
@@ -1004,6 +1005,13 @@
 			var member = memberList.filter(function (m) { return m['會員ID'] === memberId; })[0];
 			if (!member) return;
 			openMessageComposer('memberMessageArea', [{ id: memberId, name: member['姓名'] }]);
+		}
+
+		// 報名名單裡單一報名者的「傳訊息」，編輯區一樣展開在名單上方
+		function openRegistrantMessageComposer(registrationId) {
+			var registration = currentRegistrations.filter(function (r) { return r['報名ID'] === registrationId; })[0];
+			if (!registration) return;
+			openMessageComposer('registrationMessageArea', [{ id: registration['會員ID'], name: registration['會員姓名'] }]);
 		}
 
 		function openRegistrationMessageComposer() {
