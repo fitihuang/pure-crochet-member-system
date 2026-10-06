@@ -95,7 +95,7 @@ Cloudflare Workers，單一 Worker `pure-crochet-backend`，`worker/src/index.js
 | `auth.js` | 驗證 LINE ID Token、判斷是否為管理員 |
 | `sheetsApi.js` | Google Sheets 的讀寫抽象層（含快取、日期序號轉換、批次讀取） |
 | `googleAuth.js` | 用服務帳號金鑰簽發 JWT，換取 Google API access token |
-| `members.js` | 會員 CRUD、自助申請、等級升等邏輯 |
+| `members.js` | 會員 CRUD、自助申請、等級升等邏輯、管理員手動傳訊息給會員 |
 | `events.js` | 活動 CRUD、名額計算、依等級定價 |
 | `registrations.js` | 報名邏輯、自訂欄位加價計算、報名提醒、刪除報名 |
 | `grades.js` | 會員等級查詢（唯讀） |
@@ -254,6 +254,7 @@ Cloudflare R2，bucket `pure-crochet-images`，透過 Worker binding `IMAGES_BUC
 | `getAllMembers` | `idToken` | 管理員 | 全部會員列表 |
 | `createMember` | `idToken`, `memberData` | 管理員 | 後台手動新增會員 |
 | `updateMember` | `idToken`, `memberId`, `memberData` | 管理員 | 更新任意欄位（direct pass-through，沒有欄位白名單） |
+| `sendMessageToMembers` | `idToken`, `memberIds`（陣列）, `text` | 管理員 | 用 LINE 單人推播傳訊息給指定會員（詳見 6.7）。回傳 `{ 成功人數, 失敗清單: [{姓名, 原因}] }` |
 | `getAllEventsForAdmin` | `idToken` | 管理員 | 全部活動（含非開放中的） |
 | `createEvent` | `idToken`, `eventData` | 管理員 | 新增活動 |
 | `updateEvent` | `idToken`, `eventId`, `eventData` | 管理員 | 更新活動 |
@@ -347,9 +348,9 @@ Cloudflare R2，bucket `pure-crochet-images`，透過 Worker binding `IMAGES_BUC
 
 **四大卡片區塊**（依序）：
 
-1. **會員管理**：新增/編輯表單（姓名、Email、手機、等級下拉、一對一資格 checkbox）+ 會員列表（顯示等級標籤、一對一資格標籤、付費次數）+「重新計算付費次數」按鈕（手動觸發 `checkAllMembersUpgrade`）。
+1. **會員管理**：新增/編輯表單（姓名、Email、手機、等級下拉、一對一資格 checkbox）+ 會員列表（顯示等級標籤、一對一資格標籤、付費次數，每列有「編輯」「傳訊息」按鈕）+「重新計算付費次數」按鈕（手動觸發 `checkAllMembersUpgrade`）。「傳訊息」會在列表上方展開訊息編輯區（詳見 6.7）。
 2. **活動管理**：新增/編輯/複製表單（詳見 6.5）+ 自訂報名欄位編輯器（詳見 6.3）+ 活動列表（每筆有編輯/複製/報名名單/欄位統計連結（有自訂欄位才顯示）/刪除五個動作）。
-3. **報名名單區塊**（`#registrationSection`，預設隱藏，點「報名名單」才顯示並捲動過去）：顯示某活動的所有報名（姓名、付費標籤、佔用類別、報名時間、金額、自訂欄位回覆），每筆可以「標記已付費/未付費」跟「刪除」（刪除前彈確認，說明會連動刪除消費紀錄且不可復原）。
+3. **報名名單區塊**（`#registrationSection`，預設隱藏，點「報名名單」才顯示並捲動過去）：顯示某活動的所有報名（姓名、付費標籤、佔用類別、報名時間、金額、自訂欄位回覆），每筆可以「標記已付費/未付費」跟「刪除」（刪除前彈確認，說明會連動刪除消費紀錄且不可復原）。名單上方有「傳訊息給所有報名者」按鈕（有人報名才顯示），收件人是該活動所有報名者（同一會員多筆報名只算一位），訊息編輯區在名單上方展開（詳見 6.7）。
 4. **一對一預約管理**：預約設定表單（可選時長/緩衝時間/開放時段/提醒分鐘數/私訊連結/報價說明，對應 Settings）+ 手動建立預約表單（用來解鎖學員的自助預約資格）+ 預約列表（可修改時間/取消）。
 
 **活動表單的「複製」功能**（2026-09 新增）：`renderEventForm(event, forceNew)` 第二個參數為 `true` 時，表單欄位會用來源活動的值預填，但存檔時當新活動處理（`saveEvent(null)`），狀態強制重設回「開放報名」（不繼承已截止/已額滿）。標題會顯示「新增活動（複製自「原活動名稱」）」。
@@ -462,6 +463,22 @@ if usedCount >= event[quotaField] → 報名時丟錯「該類別名額已滿」
 
 改期（`updateLessonTime`）**不改時長**，沿用原本預約的時長（用結束時間減開始時間反推），不受目前 Settings 裡可選時長清單變動的影響；改期後會重設 `已提醒` 為 `否`，避免用舊時間算出的提醒視窗漏發。
 
+### 6.7 管理員手動傳訊息給會員
+
+兩個入口：會員列表每列的「傳訊息」（單人），以及活動報名名單上方的「傳訊息給所有報名者」（批次）。兩者共用同一個編輯區元件（`openMessageComposer`），同一時間只會開一個。
+
+**前端流程**：
+1. 在 `textarea` 輸入訊息（`maxlength=5000`，有字數計數）。
+2. 按「預覽並傳送」→ 空白訊息直接擋；否則跳出 `appConfirm`，完整列出**收件人數、收件人姓名清單與訊息全文**，按確定才真的送出（推播收不回來，這個確認步驟不能省）。
+3. 送出期間按鈕 disabled 並顯示「傳送中...」，並用 `isSendingMessage` 旗標擋重複觸發。
+4. 完成後跳出結果彈窗：成功幾位、失敗幾位，並逐一列出沒收到的人與原因，編輯區隨即關閉。API 本身失敗（例如驗證錯誤）時則保留草稿並恢復按鈕，讓管理員修改後重試。
+
+**後端 `sendMessageToMembers`**（`members.js`）：
+- 僅限管理員；`memberIds` 必須是非空陣列（會先去重），單次上限 100 位；訊息 trim 後不能是空白、上限 5000 字（LINE 單則文字上限）。
+- 逐人呼叫 `pushMessageToUser`（單人 push，不是 broadcast/multicast），每人各自 try/catch，一個失敗不影響其他人；用其 `true/false` 回傳值判斷成功與否。
+- 失敗原因分三類：找不到會員資料、尚未綁定 LINE（沒有 `LINE userId`，不會嘗試推播）、LINE 拒絕送出（可能對方尚未加官方帳號好友或已封鎖）。
+- 回傳 `{ 成功人數, 失敗清單: [{ 姓名, 原因 }] }`。訊息內容不會寫進任何 Sheet，沒有發送紀錄。
+
 ---
 
 ## 7. 排程任務（Cron）
@@ -491,9 +508,10 @@ if usedCount >= event[quotaField] → 報名時丟錯「該類別名額已滿」
 
 - 官方帳號 `@qzj9528m`，跟 LINE Login **必須在同一個 Provider**（見 2.5）。
 - 只使用單一對象的 `POST https://api.line.me/v2/bot/message/push` API，**完全沒有用到 broadcast/multicast API**，不存在「意外推播給所有加好友的人」的風險——每次呼叫都必須帶明確的單一 `to: <userId>`。
-- 兩種推播情境：
+- 三種推播情境：
   - `pushMessageToAdmin`：迴圈跑過 `ADMIN_LINE_USER_IDS`（逗號分隔），每個都各自呼叫 `pushMessageToUser`。目前用於：新會員加入、新的一對一預約、一對一預約取消、一對一課前提醒。
   - 對會員本人的推播：報名成功通知（含金額與繳費確認提醒）、活動前一天提醒（`pushMessageToUser` 會回傳成功與否，活動提醒靠它決定要不要標 `已提醒`）。
+  - 管理員手動訊息：後台「傳訊息」功能（`sendMessageToMembers`），逐人單獨 push，同樣靠 `pushMessageToUser` 的回傳值判斷成功與否，失敗原因彙整回傳給前端顯示。
 - 推播失敗（例如對方沒加好友）只 `console.log`，**不會拋出例外**，不會擋到主要的 Sheets 寫入操作。
 
 ### 8.3 Google Calendar

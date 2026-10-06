@@ -238,6 +238,8 @@
 			color: #3a3530;
 			white-space: pre-wrap;
 			margin-bottom: 18px;
+			max-height: 55vh;
+			overflow-y: auto;
 		}
 		.appModalButtons {
 			display: flex;
@@ -340,6 +342,7 @@
 				'<h2>會員管理</h2>' +
 				'<button class="secondaryButton smallButton" onclick="runUpgradeCheck()">重新計算付費次數</button>' +
 				'<div id="memberFormArea">' + renderMemberForm(null) + '</div>' +
+				'<div id="memberMessageArea"></div>' +
 				'<div id="memberListArea">' + renderMemberList() + '</div>' +
 				'</div>' +
 				'<div class="card" id="eventSection">' +
@@ -449,7 +452,10 @@
 					(m['一對一資格'] === '是' ? '<span class="tagSmall">可預約一對一</span>' : '') + '<br>' +
 					'<span style="color:#8c8378;font-size:12px;">' + (m['手機'] || m['Email'] || '') + '　付費次數：' + m['累積付費活動次數'] + '</span>' +
 					'</div>' +
-					'<div class="listRowActions"><button class="secondaryButton smallButton" onclick="editMember(\'' + m['會員ID'] + '\')">編輯</button></div>' +
+					'<div class="listRowActions">' +
+					'<button class="secondaryButton smallButton" onclick="editMember(\'' + m['會員ID'] + '\')">編輯</button>' +
+					'<button class="linkButton smallButton" onclick="openMemberMessageComposer(\'' + m['會員ID'] + '\')">傳訊息</button>' +
+					'</div>' +
 					'</div>';
 			}).join('');
 		}
@@ -973,10 +979,127 @@
 						'</div>';
 				}).join('');
 
+			currentRegistrations = registrations;
 			document.getElementById('registrationSection').innerHTML = '' +
 				'<h2>「' + (event ? event['活動名稱'] : eventId) + '」報名名單</h2>' +
+				(registrations.length > 0 ? '<button class="linkButton smallButton" style="margin-bottom:10px;" onclick="openRegistrationMessageComposer()">傳訊息給所有報名者</button>' : '') +
+				'<div id="registrationMessageArea"></div>' +
 				rows +
 				'<button class="secondaryButton" style="margin-top:10px;" onclick="closeRegistrations()">關閉</button>';
+		}
+
+		// ---------- 傳訊息給會員（LINE 推播） ----------
+
+		// 目前正在編輯訊息的收件人與掛載位置；同一時間只開一個編輯區，避免兩邊各有一份草稿搞混
+		var currentRegistrations = [];
+		var messageRecipients = [];
+		var messageMountId = '';
+		var isSendingMessage = false;
+
+		function escapeHtml(text) {
+			return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+		}
+
+		function openMemberMessageComposer(memberId) {
+			var member = memberList.filter(function (m) { return m['會員ID'] === memberId; })[0];
+			if (!member) return;
+			openMessageComposer('memberMessageArea', [{ id: memberId, name: member['姓名'] }]);
+		}
+
+		function openRegistrationMessageComposer() {
+			var seen = {};
+			var recipients = [];
+			currentRegistrations.forEach(function (r) {
+				if (seen[r['會員ID']]) return;
+				seen[r['會員ID']] = true;
+				recipients.push({ id: r['會員ID'], name: r['會員姓名'] });
+			});
+			openMessageComposer('registrationMessageArea', recipients);
+		}
+
+		function openMessageComposer(mountId, recipients) {
+			if (isSendingMessage) return;
+			closeMessageComposers();
+			messageRecipients = recipients;
+			messageMountId = mountId;
+			var mount = document.getElementById(mountId);
+			mount.innerHTML = '' +
+				'<div class="formBox">' +
+				'<h3>傳訊息給 ' + recipients.length + ' 位會員</h3>' +
+				'<div style="color:#8c8378;font-size:12px;margin-bottom:8px;">' +
+				recipients.map(function (r) { return escapeHtml(r.name); }).join('、') + '</div>' +
+				'<span class="fieldLabel">訊息內容（LINE 推播，發送後無法收回）</span>' +
+				'<textarea id="messageTextInput" maxlength="5000" style="min-height:120px;" oninput="updateMessageCounter()"></textarea>' +
+				'<div id="messageCounter" style="color:#8c8378;font-size:12px;margin-bottom:8px;">0 / 5000</div>' +
+				'<button id="sendMessageButton" onclick="sendComposedMessage()">預覽並傳送</button> ' +
+				'<button class="secondaryButton" onclick="closeMessageComposers()">取消</button>' +
+				'</div>';
+			mount.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			document.getElementById('messageTextInput').focus();
+		}
+
+		function updateMessageCounter() {
+			var length = document.getElementById('messageTextInput').value.length;
+			document.getElementById('messageCounter').textContent = length + ' / 5000';
+		}
+
+		function closeMessageComposers() {
+			['memberMessageArea', 'registrationMessageArea'].forEach(function (id) {
+				var el = document.getElementById(id);
+				if (el) el.innerHTML = '';
+			});
+			messageRecipients = [];
+			messageMountId = '';
+		}
+
+		// 推播發出去收不回來，所以一定要先跳出確認畫面，完整列出收件人與訊息全文，按確定才真的送
+		function sendComposedMessage() {
+			if (isSendingMessage) return;
+			var text = document.getElementById('messageTextInput').value.trim();
+			if (!text) {
+				appAlert('請輸入訊息內容');
+				return;
+			}
+			if (text.length > 5000) {
+				appAlert('訊息太長，上限 5000 字（目前 ' + text.length + ' 字）');
+				return;
+			}
+
+			var names = messageRecipients.map(function (r) { return r.name; }).join('、');
+			appConfirm('即將用 LINE 傳訊息給 ' + messageRecipients.length + ' 位會員：\n' + names +
+				'\n\n訊息內容：\n' + text + '\n\n發出後無法收回，確定要傳送嗎？').then(function (ok) {
+				if (!ok || isSendingMessage) return;
+				isSendingMessage = true;
+				var button = document.getElementById('sendMessageButton');
+				button.disabled = true;
+				button.textContent = '傳送中...';
+
+				var memberIds = messageRecipients.map(function (r) { return r.id; });
+				callApi('sendMessageToMembers', { idToken: idToken, memberIds: memberIds, text: text })
+					.then(function (result) {
+						isSendingMessage = false;
+						closeMessageComposers();
+						appAlert(buildSendResultMessage(result));
+					})
+					.catch(function (err) {
+						// 失敗時保留草稿跟編輯區，讓管理員可以修改後重試
+						isSendingMessage = false;
+						button.disabled = false;
+						button.textContent = '預覽並傳送';
+						appAlert(err.message);
+					});
+			});
+		}
+
+		function buildSendResultMessage(result) {
+			var lines = ['傳送完成：成功 ' + result['成功人數'] + ' 位，失敗 ' + result['失敗清單'].length + ' 位'];
+			if (result['失敗清單'].length > 0) {
+				lines.push('', '沒收到的人：');
+				result['失敗清單'].forEach(function (f) {
+					lines.push('・' + f['姓名'] + '：' + f['原因']);
+				});
+			}
+			return lines.join('\n');
 		}
 
 		function togglePayment(eventId, registrationId, markPaid) {
@@ -1013,6 +1136,7 @@
 			var section = document.getElementById('registrationSection');
 			section.style.display = 'none';
 			section.innerHTML = '';
+			closeMessageComposers();
 		}
 	</script>
 </body>

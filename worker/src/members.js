@@ -1,6 +1,6 @@
 import { getGradeById, getGradeIdByName } from './grades.js';
 import { findEventById } from './events.js';
-import { pushMessageToAdmin } from './lineMessaging.js';
+import { pushMessageToAdmin, pushMessageToUser } from './lineMessaging.js';
 
 export async function getMemberProfile(sheets, auth) {
 	const member = await findMemberByLineUserId(sheets, auth.lineUserId);
@@ -66,6 +66,56 @@ export async function applyForMembership(sheets, env, auth, memberData) {
 export async function getAllMembers(sheets, auth) {
 	if (!auth.isAdmin) throw new Error('沒有權限');
 	return sheets.getSheetAsObjects('Members');
+}
+
+// LINE 單則文字訊息上限 5000 字；一次發送人數另設上限，避免單次請求跑太久或超過 Workers 的子請求數量限制
+const MAX_MESSAGE_LENGTH = 5000;
+const MAX_MESSAGE_RECIPIENTS = 100;
+
+// 後台手動傳訊息給指定會員。推播發出去收不回來，所以每人都是單獨一次 push（不用 broadcast/multicast），
+// 單一會員失敗不影響其他人，失敗原因彙整回傳讓管理員知道誰沒收到
+export async function sendMessageToMembers(sheets, env, auth, memberIds, text) {
+	if (!auth.isAdmin) throw new Error('沒有權限');
+
+	if (!Array.isArray(memberIds) || memberIds.length === 0) throw new Error('請選擇收件人');
+	const uniqueMemberIds = [...new Set(memberIds)];
+	if (uniqueMemberIds.length > MAX_MESSAGE_RECIPIENTS) {
+		throw new Error('一次最多只能傳給 ' + MAX_MESSAGE_RECIPIENTS + ' 位會員');
+	}
+
+	const messageText = typeof text === 'string' ? text.trim() : '';
+	if (!messageText) throw new Error('訊息內容不能是空白');
+	if (messageText.length > MAX_MESSAGE_LENGTH) {
+		throw new Error('訊息太長，上限 ' + MAX_MESSAGE_LENGTH + ' 字（目前 ' + messageText.length + ' 字）');
+	}
+
+	const members = await sheets.getSheetAsObjects('Members');
+	let successCount = 0;
+	const failures = [];
+
+	for (const memberId of uniqueMemberIds) {
+		const member = members.find((m) => m['會員ID'] === memberId);
+		if (!member) {
+			failures.push({ 姓名: memberId, 原因: '找不到會員資料' });
+			continue;
+		}
+		if (!member['LINE userId']) {
+			failures.push({ 姓名: member['姓名'], 原因: '尚未綁定 LINE' });
+			continue;
+		}
+		try {
+			const delivered = await pushMessageToUser(env, member['LINE userId'], messageText);
+			if (delivered) {
+				successCount++;
+			} else {
+				failures.push({ 姓名: member['姓名'], 原因: 'LINE 拒絕送出（可能尚未加官方帳號好友或已封鎖）' });
+			}
+		} catch (err) {
+			failures.push({ 姓名: member['姓名'], 原因: err.message });
+		}
+	}
+
+	return { 成功人數: successCount, 失敗清單: failures };
 }
 
 export async function createMember(sheets, auth, memberData) {

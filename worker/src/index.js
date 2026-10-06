@@ -4,7 +4,7 @@ import { getGradeList } from './grades.js';
 import {
 	getMemberProfile, getAllMembers, createMember, updateMember,
 	checkAllMembersUpgrade, runMemberUpgradeCheck, applyForMembership,
-	checkHonorMemberUpgrades
+	checkHonorMemberUpgrades, sendMessageToMembers
 } from './members.js';
 import { getEventList, getEventDetail, getAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from './events.js';
 import { submitRegistration, getEventRegistrationsForAdmin, updateRegistrationPayment, sendUpcomingEventReminders, deleteRegistration } from './registrations.js';
@@ -28,7 +28,8 @@ const AUTH_REQUIRED_ACTIONS = new Set([
 	'getAllEventsForAdmin', 'createEvent', 'updateEvent', 'deleteEvent', 'submitRegistration',
 	'getEventRegistrationsForAdmin', 'updateRegistrationPayment', 'deleteRegistration', 'checkAllMembersUpgrade',
 	'uploadImage', 'getAvailableLessonSlots', 'bookLesson', 'cancelLesson',
-	'getAllLessonsForAdmin', 'createLessonForMember', 'updateLessonTime', 'updateSettings'
+	'getAllLessonsForAdmin', 'createLessonForMember', 'updateLessonTime', 'updateSettings',
+	'sendMessageToMembers'
 ]);
 
 function jsonResponse(data) {
@@ -110,6 +111,8 @@ async function handleApiRequest(env, params) {
 			return createMember(sheets, auth, params.memberData);
 		case 'updateMember':
 			return updateMember(sheets, auth, params.memberId, params.memberData);
+		case 'sendMessageToMembers':
+			return sendMessageToMembers(sheets, env, auth, params.memberIds, params.text);
 		case 'getEventList':
 			return getEventList(sheets);
 		case 'getEventDetail':
